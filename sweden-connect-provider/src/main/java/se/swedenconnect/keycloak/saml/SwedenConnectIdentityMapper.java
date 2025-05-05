@@ -39,11 +39,11 @@ import java.util.Optional;
  *
  * @author Felix Hellman
  */
-public class TeknisktRamverkIdentityMapper implements Module {
+public class SwedenConnectIdentityMapper implements Module {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  private static final Logger log = Logger.getLogger(TeknisktRamverkIdentityMapper.class);
+  private static final Logger log = Logger.getLogger(SwedenConnectIdentityMapper.class);
 
   /**
    * Attribute key for username attribute.

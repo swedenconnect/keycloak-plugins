@@ -46,7 +46,7 @@ import java.util.Optional;
  *
  * @author Felix Hellman
  */
-public class TeknisktRamverkSamlMetadataUpdater implements Module, SamlMetadataDescriptorUpdater {
+public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDescriptorUpdater {
 
   /**
    * Attribute key for entity categories.
@@ -64,7 +64,6 @@ public class TeknisktRamverkSamlMetadataUpdater implements Module, SamlMetadataD
   public static final String ATTRIBUTE_ORG_EN_NAME = "attribute.org.en.name";
 
   public static final String ATTRIBUTE_ORG_EN_URI = "attribute.org.en.uri";
-  private static final Logger log = LoggerFactory.getLogger(TeknisktRamverkSamlMetadataUpdater.class);
 
   @Override
   public List<ProviderConfigProperty> getConfigProperties() {
@@ -297,5 +296,4 @@ public class TeknisktRamverkSamlMetadataUpdater implements Module, SamlMetadataD
       attribute.appendChild(child);
     });
   }
-
 }

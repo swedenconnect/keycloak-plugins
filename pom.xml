@@ -27,7 +27,7 @@
     <url>http://maven.apache.org</url>
 
     <modules>
-        <module>tekniskt-ramverk-provider</module>
+        <module>sweden-connect-provider</module>
     </modules>
 
     <properties>

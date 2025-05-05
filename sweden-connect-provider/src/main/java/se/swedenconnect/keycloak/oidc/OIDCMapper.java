@@ -61,14 +61,17 @@ public class OIDCMapper
     if (acr != null) {
       accessToken.getOtherClaims().put("acr", acr);
     }
+
     final String username = userSessionModel.getUser().getUsername();
     accessToken.getOtherClaims().put("sub", username);
+
     this.mapClaims(
         accessToken,
         userSessionModel,
         protocolMapperModel,
         AttributeClaim::getAccessToken
     );
+
     return accessToken;
   }
 
@@ -151,17 +154,17 @@ public class OIDCMapper
 
   @Override
   public String getDisplayCategory() {
-    return "Tekniskt Ramverk";
+    return "Sweden Connect";
   }
 
   @Override
   public String getDisplayType() {
-    return "Tekniskt Ramverk";
+    return "Sweden Connect";
   }
 
   @Override
   public String getHelpText() {
-    return "Tekniskt Ramverk";
+    return "Sweden Connect";
   }
 
   @Override
@@ -185,6 +188,6 @@ public class OIDCMapper
 
   @Override
   public String getId() {
-    return "Tekniskt-Ramverk";
+    return "Sweden-Connect";
   }
 }

@@ -1,4 +1,4 @@
-# Tekniskt Ramverk provider
+# Sweden Connect provider
 
 ## SAML to OIDC Attribute Translation
 
