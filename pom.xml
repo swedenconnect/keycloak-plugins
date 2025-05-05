@@ -1,0 +1,158 @@
+<!--
+  ~ Copyright 2025 Sweden Connect
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>se.swedenconnect.keycloak</groupId>
+    <artifactId>keycloak-plugins-parent</artifactId>
+    <version>0.1</version>
+    <packaging>pom</packaging>
+
+    <url>http://maven.apache.org</url>
+
+    <modules>
+        <module>tekniskt-ramverk-provider</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-parent</artifactId>
+                <version>26.2.2</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>5.12.2</version>
+                <type>pom</type>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jvnet.staxex</groupId>
+                <artifactId>stax-ex</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- Style-check -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>10.20.0</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                    </sourceDirectories>
+                    <checkstyleRules>
+                        <module name="Checker">
+                            <module name="RegexpHeader">
+                                <property name="header" value="/*\n * Copyright (2024-)?2025 Sweden Connect"/>
+                            </module>
+                            <module name="LineLength">
+                                <property name="max" value="120"/>
+                            </module>
+                            <module name="JavadocPackage"/>
+                            <module name="TreeWalker">
+                                <module name="RequireThis">
+                                    <property name="checkFields" value="true"/>
+                                    <property name="checkMethods" value="true"/>
+                                    <property name="validateOnlyOverlapping" value="false"/>
+                                </module>
+                                <module name="FinalLocalVariable">
+                                    <property name="tokens" value="VARIABLE_DEF,PARAMETER_DEF"/>
+                                </module>
+                                <module name="JavadocType">
+                                    <property name="authorFormat" value="\S"/>
+                                </module>
+                                <module name="MissingJavadocMethod">
+                                    <property name="scope" value="public"/>
+                                </module>
+                                <module name="MissingJavadocType">
+                                    <property name="scope" value="public"/>
+                                </module>
+                                <module name="JavadocMethod">
+                                    <property name="accessModifiers" value="public,package"/>
+                                    <property name="allowMissingParamTags" value="false"/>
+                                    <property name="allowMissingReturnTag" value="false"/>
+                                </module>
+                            </module>
+                        </module>
+                    </checkstyleRules>
+                    <lineLength>120</lineLength>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                </configuration>
+            </plugin>
+
+            <!-- Compilation -->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <configuration>
+                            <rules>
+                                <dependencyConvergence/>
+                                <banDuplicatePomDependencyVersions/>
+                                <requireMavenVersion>
+                                    <version>3.8.8</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>21</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
