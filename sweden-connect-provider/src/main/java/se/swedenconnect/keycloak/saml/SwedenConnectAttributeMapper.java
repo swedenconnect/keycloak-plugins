@@ -29,14 +29,14 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * SAML SP/IDP proxy {@link UserAttributeMapper} for implementing Tekniskt Ramverk.
+ * SAML SP/IDP proxy {@link UserAttributeMapper} for implementing Sweden Connect Attribute Specification.
  *
  * @author Felix Hellman
  */
-public class TeknisktRamverkAttributeMapper extends UserAttributeMapper {
+public class SwedenConnectAttributeMapper extends UserAttributeMapper {
 
-  private final TeknisktRamverkIdentityMapper mapper = new TeknisktRamverkIdentityMapper();
-  private final TeknisktRamverkSamlMetadataUpdater metadataUpdater = new TeknisktRamverkSamlMetadataUpdater();
+  private final SwedenConnectIdentityMapper mapper = new SwedenConnectIdentityMapper();
+  private final SwedenConnectSamlMetadataUpdater metadataUpdater = new SwedenConnectSamlMetadataUpdater();
 
   @Override
   public void updateMetadata(
@@ -67,16 +67,16 @@ public class TeknisktRamverkAttributeMapper extends UserAttributeMapper {
 
   @Override
   public String getId() {
-    return "Tekniskt-Ramverk";
+    return "Sweden-Connect";
   }
 
   @Override
   public String getDisplayType() {
-    return "Tekniskt Ramverk";
+    return "Sweden Connect";
   }
 
   @Override
   public String getDisplayCategory() {
-    return "Identity Mapper & Metadata Updator";
+    return "Identity Mapper & Metadata Updater";
   }
 }

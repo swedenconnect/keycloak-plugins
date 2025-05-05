@@ -25,10 +25,10 @@
         <version>0.1</version>
     </parent>
 
-    <artifactId>tekniskt-ramverk</artifactId>
+    <artifactId>sweden-connect-provider</artifactId>
     <packaging>jar</packaging>
 
-    <name>Tekniskt ramverk</name>
+    <name>Swedebn Connect Provider</name>
     <url>http://maven.apache.org</url>
 
     <properties>

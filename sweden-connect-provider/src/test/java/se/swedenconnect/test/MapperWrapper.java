@@ -28,7 +28,7 @@ import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.IDToken;
 import org.mockito.Mockito;
 import se.swedenconnect.keycloak.oidc.OIDCMapper;
-import se.swedenconnect.keycloak.saml.TeknisktRamverkAttributeMapper;
+import se.swedenconnect.keycloak.saml.SwedenConnectAttributeMapper;
 
 import java.util.Map;
 
@@ -36,9 +36,9 @@ public class MapperWrapper {
   public MappingTestResult getResult(final TestContext testContext) {
 
     final OIDCMapper mapper = new OIDCMapper();
-    final TeknisktRamverkAttributeMapper teknisktRamverkAttributeMapper = new TeknisktRamverkAttributeMapper();
+    final SwedenConnectAttributeMapper swedenConnectAttributeMapper = new SwedenConnectAttributeMapper();
 
-    teknisktRamverkAttributeMapper.preprocessFederatedIdentity(
+    swedenConnectAttributeMapper.preprocessFederatedIdentity(
         Mockito.mock(KeycloakSession.class),
         Mockito.mock(RealmModel.class),
         Mockito.mock(IdentityProviderMapperModel.class),
