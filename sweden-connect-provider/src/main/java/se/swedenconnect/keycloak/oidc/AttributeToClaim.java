@@ -33,18 +33,15 @@ public class AttributeToClaim {
       "https://id.oidc.se/claim/userSignature", AttributeClaim.builder(
               "urn:oid:1.2.752.201.3.11",
               "https://id.oidc.se/claim/userSignature"
-          ).accessToken(true)
-          .build(),
+          ).build(),
       "https://id.oidc.se/claim/userCertificate", AttributeClaim.builder(
               "urn:oid:1.2.752.201.3.10",
               "https://id.oidc.se/claim/userCertificate"
-          ).accessToken(true)
-          .build(),
+          ).build(),
       "https://id.oidc.se/claim/authnEvidence", AttributeClaim.builder(
               "urn:oid:1.2.752.201.3.13",
               "https://id.oidc.se/claim/authnEvidence"
-          ).accessToken(true)
-          .build()
+          ).build()
   );
 
   private static List<AttributeClaim> claimMappings() {
@@ -54,9 +51,7 @@ public class AttributeToClaim {
         AttributeClaim.builder(
                 "urn:oid:2.5.4.4",
                 "family_name"
-            ).idToken(true)
-            .accessToken(true)
-            .build()
+            ).build()
     );
     attributeClaims.add(
         AttributeClaim.builder(

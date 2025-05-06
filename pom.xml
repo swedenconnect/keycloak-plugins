@@ -21,13 +21,14 @@
 
     <groupId>se.swedenconnect.keycloak</groupId>
     <artifactId>keycloak-plugins-parent</artifactId>
-    <version>0.1</version>
+    <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <url>http://maven.apache.org</url>
 
     <modules>
         <module>sweden-connect-provider</module>
+        <module>clients</module>
     </modules>
 
     <properties>
