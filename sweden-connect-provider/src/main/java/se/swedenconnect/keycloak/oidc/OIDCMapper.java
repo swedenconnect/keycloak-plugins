@@ -177,7 +177,6 @@ public class OIDCMapper
                                                                final ClaimsParameter.TokenType tokenType) {
     return Optional.ofNullable(context.getClientSession().getNotes().get("claims")).map(
             c -> {
-              log.infof("Claims %s", c);
               try {
                 return (Map<String, Object>) MAPPER.readerFor(Map.class).readValue(c);
               } catch (final JsonProcessingException e) {
