@@ -22,7 +22,7 @@
     <parent>
         <artifactId>keycloak-plugins-parent</artifactId>
         <groupId>se.swedenconnect.keycloak</groupId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>sweden-connect-provider</artifactId>
