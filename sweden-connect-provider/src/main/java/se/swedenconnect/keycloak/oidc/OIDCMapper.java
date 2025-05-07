@@ -34,7 +34,9 @@ import org.keycloak.representations.IDToken;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,13 +53,17 @@ import java.util.function.Predicate;
 public class OIDCMapper extends AbstractOIDCProtocolMapper
     implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
+  private static final String ATTRIBUTE_ACCESS_TOKEN_KEY = "attribute.access.token.key";
+  private static final String ATTRIBUTE_ID_TOKEN_KEY = "attribute.id.token.key";
+  private static final String ATTRIBUTE_USERINFO_TOKEN_KEY = "attribute.userinfo.token.key";
+
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Logger log = Logger.getLogger(OIDCMapper.class);
 
   @Override
   public AccessToken transformAccessToken(
       final AccessToken accessToken,
-      final ProtocolMapperModel protocolMapperModel,
+      final ProtocolMapperModel mapperModel,
       final KeycloakSession keycloakSession,
       final UserSessionModel userSessionModel,
       final ClientSessionContext context) {
@@ -65,10 +71,14 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
     accessToken.getOtherClaims().put("acr", null);
     accessToken.setAuthorization(null);
     accessToken.setOtherClaims("client_id", context.getClientSession().getClient().getClientId());
+    log.infof("CONFIG %s", mapperModel.getConfig());
 
-    final Predicate<AttributeClaim> getAccessToken = AttributeClaim::getAccessToken;
-
-    this.mapClaims(accessToken, userSessionModel, protocolMapperModel, getAccessToken);
+    this.mapClaims(
+        accessToken,
+        userSessionModel,
+        a -> false,
+        this.getTokenConfiguration(mapperModel, ATTRIBUTE_ACCESS_TOKEN_KEY)
+    );
 
     return accessToken;
   }
@@ -76,7 +86,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
   @Override
   public IDToken transformIDToken(
       final IDToken idToken,
-      final ProtocolMapperModel protocolMapperModel,
+      final ProtocolMapperModel mapperModel,
       final KeycloakSession keycloakSession,
       final UserSessionModel userSessionModel,
       final ClientSessionContext context) {
@@ -92,8 +102,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
       idToken.setAcr(acr);
     }
 
-    final Predicate<AttributeClaim> getIdToken = AttributeClaim::getIdToken;
-    this.mapClaims(idToken, userSessionModel, protocolMapperModel, getIdToken.or(claimsParameter));
+    this.mapClaims(idToken, userSessionModel, claimsParameter, this.getTokenConfiguration(mapperModel, ATTRIBUTE_ID_TOKEN_KEY));
     logRequiredClaims(claimsParameter, idToken, "idtoken", context);
 
     return idToken;
@@ -128,7 +137,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
   @Override
   public AccessToken transformUserInfoToken(
       final AccessToken accessToken,
-      final ProtocolMapperModel protocolMapperModel,
+      final ProtocolMapperModel mapperModel,
       final KeycloakSession keycloakSession,
       final UserSessionModel userSessionModel,
       final ClientSessionContext clientSessionContext) {
@@ -136,8 +145,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
     final ClaimsParameter claimsParameter =
         this.getClaimsParameterFromContext(clientSessionContext, ClaimsParameter.TokenType.USERINFO);
 
-    final Predicate<AttributeClaim> getUserInfo = AttributeClaim::getUserInfo;
-    this.mapClaims(accessToken, userSessionModel, protocolMapperModel, getUserInfo.or(claimsParameter));
+    this.mapClaims(accessToken, userSessionModel, claimsParameter, this.getTokenConfiguration(mapperModel, ATTRIBUTE_USERINFO_TOKEN_KEY));
 
     logRequiredClaims(claimsParameter, accessToken, "userinfo", clientSessionContext);
 
@@ -147,8 +155,8 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
   private void mapClaims(
       final IDToken accessToken,
       final UserSessionModel userSessionModel,
-      final ProtocolMapperModel protocolMapperModel,
-      final Predicate<AttributeClaim> shouldMap) {
+      final Predicate<AttributeClaim> shouldMap,
+      final Map<String, String> config) {
 
     final String json = userSessionModel.getNote("SAML_ATTRIBUTES_JSON");
 
@@ -160,11 +168,9 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
         }
         this.mapClaim(accessToken, mapper, claims);
       });
-      AttributeToClaim.NON_DEFAULT_CLAIMS.values().forEach(ac -> {
-        final Optional<String> config = Optional.ofNullable(protocolMapperModel.getConfig().get(ac.getOidcClaimName()));
-        if (config.isPresent() && Boolean.parseBoolean(config.get())) {
-          this.mapClaim(accessToken, ac, claims);
-        }
+      //Do not check if claims from config should map or not
+      AttributeToClaim.fromConfiguration(config).forEach(mapper -> {
+        this.mapClaim(accessToken, mapper, claims);
       });
     } catch (final JsonProcessingException e) {
       throw new IllegalArgumentException("Could not process arguments from SAML attributes", e);
@@ -188,7 +194,6 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
           if (Objects.nonNull(scope)) {
             final ClaimsParameter other = ClaimsParameter.fromScope(scope);
             if (Objects.nonNull(other)) {
-              log.infof("Created claims from scope %s", other.toString());
               claims.merge(other);
             }
           }
@@ -232,19 +237,44 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
   public List<ProviderConfigProperty> getConfigProperties() {
     final List<ProviderConfigProperty> providerConfigProperties = new ArrayList<>();
 
-    AttributeToClaim.NON_DEFAULT_CLAIMS.values().forEach(ac -> {
-      final ProviderConfigProperty property = new ProviderConfigProperty();
-      property.setName(ac.getOidcClaimName());
-      property.setType(ProviderConfigProperty.BOOLEAN_TYPE);
-      property.setDefaultValue(false);
-      property.setLabel("""
-          claim: %s
-          """.formatted(ac.getOidcClaimName()));
-      property.setHelpText("Enable mapping of %s to token".formatted(ac.getOidcClaimName()));
-      providerConfigProperties.add(property);
-    });
+    final ProviderConfigProperty accessToken = new ProviderConfigProperty();
+    accessToken.setType(ProviderConfigProperty.MAP_TYPE);
+    accessToken.setLabel("Access Token Mappings");
+    accessToken.setHelpText("SAML Attribute to OIDC Claim Mapping");
+    accessToken.setName(ATTRIBUTE_ACCESS_TOKEN_KEY);
+    providerConfigProperties.add(accessToken);
+
+    final ProviderConfigProperty idToken = new ProviderConfigProperty();
+    idToken.setType(ProviderConfigProperty.MAP_TYPE);
+    idToken.setLabel("Id Token Mappings");
+    idToken.setHelpText("SAML Attribute to OIDC Claim Mapping");
+    idToken.setName(ATTRIBUTE_ID_TOKEN_KEY);
+    providerConfigProperties.add(idToken);
+
+    final ProviderConfigProperty userInfoToken = new ProviderConfigProperty();
+    userInfoToken.setType(ProviderConfigProperty.MAP_TYPE);
+    userInfoToken.setLabel("UserInfo Token Mappings");
+    userInfoToken.setHelpText("SAML Attribute to OIDC Claim Mapping");
+    userInfoToken.setName(ATTRIBUTE_USERINFO_TOKEN_KEY);
+    providerConfigProperties.add(userInfoToken);
 
     return providerConfigProperties;
+  }
+
+  private Map<String, String> getTokenConfiguration(final ProtocolMapperModel mapperModel, final String key) {
+    final String json = mapperModel.getConfig().get(key);
+    if (Objects.isNull(json) || json.isBlank()) {
+      return Map.of();
+    }
+    try {
+      final Map<String, String> configMap = new HashMap<>();
+      final List<Map<String, String>> value = MAPPER.readerFor(List.class).readValue(json);
+      value.forEach(v -> configMap.put(v.get("key"), v.get("value")));
+      return configMap;
+    } catch (final Exception e) {
+      log.errorf("Failed to load json configuration from token mapping %s", e.getMessage());
+      return Map.of();
+    }
   }
 
   @Override

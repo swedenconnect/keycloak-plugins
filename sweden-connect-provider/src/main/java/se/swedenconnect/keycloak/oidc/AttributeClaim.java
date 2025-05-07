@@ -25,30 +25,18 @@ package se.swedenconnect.keycloak.oidc;
 public class AttributeClaim {
   private final String samlAttributeName;
   private final String oidcClaimName;
-  private final Boolean idToken;
-  private final Boolean accessToken;
-  private final Boolean userInfo;
 
   /**
    * Constructor.
    * @param samlAttributeName
    * @param oidcClaimName
-   * @param idToken
-   * @param accessToken
-   * @param userInfo
    */
   public AttributeClaim(
       final String samlAttributeName,
-      final String oidcClaimName,
-      final Boolean idToken,
-      final Boolean accessToken,
-      final Boolean userInfo) {
+      final String oidcClaimName) {
 
     this.samlAttributeName = samlAttributeName;
     this.oidcClaimName = oidcClaimName;
-    this.idToken = idToken;
-    this.accessToken = accessToken;
-    this.userInfo = userInfo;
   }
 
   /**
@@ -63,27 +51,6 @@ public class AttributeClaim {
    */
   public String getOidcClaimName() {
     return this.oidcClaimName;
-  }
-
-  /**
-   * @return id token
-   */
-  public Boolean getIdToken() {
-    return this.idToken;
-  }
-
-  /**
-   * @return access token
-   */
-  public Boolean getAccessToken() {
-    return this.accessToken;
-  }
-
-  /**
-   * @return user info
-   */
-  public Boolean getUserInfo() {
-    return this.userInfo;
   }
 
   /**
@@ -107,9 +74,6 @@ public class AttributeClaim {
   public static class Builder {
     private final String samlAttributeName;
     private final String oidcClaimName;
-    private Boolean idToken = false;
-    private Boolean accessToken = false;
-    private Boolean userInfo = false;
 
     /**
      * Constructor.
@@ -122,42 +86,12 @@ public class AttributeClaim {
     }
 
     /**
-     * @param accessToken true if this claim should be present in access token
-     * @return this
-     */
-    public Builder accessToken(final Boolean accessToken) {
-      this.accessToken = accessToken;
-      return this;
-    }
-
-    /**
-     * @param userInfo true if this claim should be present in user info
-     * @return this
-     */
-    public Builder userInfo(final Boolean userInfo) {
-      this.userInfo = userInfo;
-      return this;
-    }
-
-    /**
-     * @param idToken true if this claim should be present in id token
-     * @return this
-     */
-    public Builder idToken(final Boolean idToken) {
-      this.idToken = idToken;
-      return this;
-    }
-
-    /**
      * @return new AttributeClaim instance
      */
     public AttributeClaim build() {
       return new AttributeClaim(
           this.samlAttributeName,
-          this.oidcClaimName,
-          this.idToken,
-          this.accessToken,
-          this.userInfo
+          this.oidcClaimName
       );
     }
   }

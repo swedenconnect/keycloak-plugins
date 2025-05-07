@@ -152,10 +152,8 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
 
   @Override
   public String toString() {
-    final StringBuffer sb = new StringBuffer("ClaimsParameter{");
-    sb.append("claims=").append(this.claims);
-    sb.append(", tokenType=").append(this.tokenType);
-    sb.append('}');
-    return sb.toString();
+    return "ClaimsParameter{" + "claims=" + this.claims +
+        ", tokenType=" + this.tokenType +
+        '}';
   }
 }

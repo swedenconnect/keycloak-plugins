@@ -17,6 +17,8 @@
 
 package se.swedenconnect.test;
 
+import org.keycloak.models.AuthenticatedClientSessionModel;
+import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.IdentityProviderMapperModel;
 import org.keycloak.models.KeycloakSession;
@@ -55,12 +57,19 @@ public class MapperWrapper {
     Mockito.when(mock.getUser()).thenReturn(userModel);
     final ProtocolMapperModel model = new ProtocolMapperModel();
     model.setConfig(Map.of("attribute.username.key", "urn:oid:1.2.752.29.4.13"));
+    final ClientSessionContext csc = Mockito.mock(ClientSessionContext.class);
+    final AuthenticatedClientSessionModel acsm = Mockito.mock(AuthenticatedClientSessionModel.class);
+    Mockito.when(csc.getScopeString(true)).thenReturn("oidc");
+    Mockito.when(csc.getClientSession()).thenReturn(acsm);
+    final ClientModel client = Mockito.mock(ClientModel.class);
+    Mockito.when(acsm.getClient()).thenReturn(client);
+    Mockito.when(client.getClientId()).thenReturn("testclient");
     final AccessToken accessToken = mapper.transformAccessToken(
         new AccessToken(),
         model,
         Mockito.mock(KeycloakSession.class),
         mock,
-        Mockito.mock(ClientSessionContext.class)
+        csc
     );
 
     final IDToken idToken = mapper.transformIDToken(
@@ -68,14 +77,14 @@ public class MapperWrapper {
         model,
         Mockito.mock(KeycloakSession.class),
         mock,
-        Mockito.mock(ClientSessionContext.class)
+        csc
     );
 
     final AccessToken userInfo = mapper.transformUserInfoToken(new AccessToken(),
         Mockito.mock(ProtocolMapperModel.class),
         Mockito.mock(KeycloakSession.class),
         mock,
-        Mockito.mock(ClientSessionContext.class));
+        csc);
 
     return new MappingTestResult(testContext.getSamlAttributes(), idToken, accessToken, userInfo);
   }
