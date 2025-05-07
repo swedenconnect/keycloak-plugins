@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  */
-
 package se.swedenconnect.keycloak.saml;
 
 import org.keycloak.broker.provider.BrokeredIdentityContext;

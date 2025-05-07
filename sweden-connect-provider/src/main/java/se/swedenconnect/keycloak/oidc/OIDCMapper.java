@@ -18,11 +18,9 @@ package se.swedenconnect.keycloak.oidc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.ModelException;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
@@ -32,9 +30,10 @@ import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.IDToken;
-import org.keycloak.services.ErrorResponseException;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +48,8 @@ import java.util.function.Predicate;
  *
  * @author Felix Hellman
  */
-public class OIDCMapper
-    extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
+public class OIDCMapper extends AbstractOIDCProtocolMapper
+    implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Logger log = Logger.getLogger(OIDCMapper.class);
@@ -63,22 +62,13 @@ public class OIDCMapper
       final UserSessionModel userSessionModel,
       final ClientSessionContext context) {
 
-    final String acr = userSessionModel.getNote("acr");
-    if (acr != null) {
-      accessToken.getOtherClaims().put("acr", acr);
-    }
-
-    final String username = userSessionModel.getUser().getUsername();
-    accessToken.getOtherClaims().put("sub", username);
+    accessToken.getOtherClaims().put("acr", null);
+    accessToken.setAuthorization(null);
+    accessToken.setOtherClaims("client_id", context.getClientSession().getClient().getClientId());
 
     final Predicate<AttributeClaim> getAccessToken = AttributeClaim::getAccessToken;
 
-    this.mapClaims(
-        accessToken,
-        userSessionModel,
-        protocolMapperModel,
-        getAccessToken
-    );
+    this.mapClaims(accessToken, userSessionModel, protocolMapperModel, getAccessToken);
 
     return accessToken;
   }
@@ -89,30 +79,50 @@ public class OIDCMapper
       final ProtocolMapperModel protocolMapperModel,
       final KeycloakSession keycloakSession,
       final UserSessionModel userSessionModel,
-      final ClientSessionContext clientSessionContext) {
+      final ClientSessionContext context) {
 
-    final ClaimsParameter claimsParameter =
-        this.getClaimsParameterFromContext(
-            clientSessionContext,
-            ClaimsParameter.TokenType.ID
-        );
+    final ClaimsParameter claimsParameter = this.getClaimsParameterFromContext(
+        context, ClaimsParameter.TokenType.ID
+    );
+
+    idToken.setAuth_time((long) context.getClientSession().getStarted());
+
+    final String acr = userSessionModel.getNote("acr");
+    if (acr != null) {
+      idToken.setAcr(acr);
+    }
 
     final Predicate<AttributeClaim> getIdToken = AttributeClaim::getIdToken;
-    this.mapClaims(
-        idToken,
-        userSessionModel,
-        protocolMapperModel,
-        getIdToken.or(claimsParameter)
-    );
+    this.mapClaims(idToken, userSessionModel, protocolMapperModel, getIdToken.or(claimsParameter));
+    logRequiredClaims(claimsParameter, idToken, "idtoken", context);
+
+    return idToken;
+  }
+
+  private static void logRequiredClaims(
+      final ClaimsParameter claimsParameter,
+      final IDToken idToken,
+      final String tokeType,
+      final ClientSessionContext clientSessionContext) {
 
     final HashSet<String> requiredParams = new HashSet<>(claimsParameter.getRequiredParameters());
     requiredParams.removeAll(idToken.getOtherClaims().keySet());
-    if (!requiredParams.isEmpty()) {
-      log.infof("Required claims %s could not be mapped for IDToken@client:%s", requiredParams,
-          clientSessionContext.getClientSession().getClient().getClientId());
+
+    // Special handling for pnr and coordination number, do not log if only one is present
+    final List<String> naturalPersonNumber = List.of(
+        "https://id.oidc.se/claim/coordinationNumber",
+        "https://id.oidc.se/claim/personalIdentityNumber"
+    );
+    if (!requiredParams.containsAll(naturalPersonNumber)) {
+      // At least one claim was not present, so we can remove them as they exclude each other.
+      requiredParams.removeAll(naturalPersonNumber);
     }
 
-    return idToken;
+    if (!requiredParams.isEmpty()) {
+      log.infof("Required claims %s could not be mapped for %s@client:%s", requiredParams,
+          tokeType,
+          clientSessionContext.getClientSession().getClient().getClientId());
+    }
   }
 
   @Override
@@ -123,25 +133,13 @@ public class OIDCMapper
       final UserSessionModel userSessionModel,
       final ClientSessionContext clientSessionContext) {
 
-    final ClaimsParameter claimsParameter = this.getClaimsParameterFromContext(
-        clientSessionContext,
-        ClaimsParameter.TokenType.USERINFO
-    );
+    final ClaimsParameter claimsParameter =
+        this.getClaimsParameterFromContext(clientSessionContext, ClaimsParameter.TokenType.USERINFO);
 
     final Predicate<AttributeClaim> getUserInfo = AttributeClaim::getUserInfo;
-    this.mapClaims(
-        accessToken,
-        userSessionModel,
-        protocolMapperModel,
-        getUserInfo.or(claimsParameter)
-    );
+    this.mapClaims(accessToken, userSessionModel, protocolMapperModel, getUserInfo.or(claimsParameter));
 
-    final HashSet<String> requiredParams = new HashSet<>(claimsParameter.getRequiredParameters());
-    requiredParams.removeAll(accessToken.getOtherClaims().keySet());
-    if (!requiredParams.isEmpty()) {
-      log.infof("Required claims %s could not be mapped for UserInfo@client:%s", requiredParams,
-          clientSessionContext.getClientSession().getClient().getClientId());
-    }
+    logRequiredClaims(claimsParameter, accessToken, "userinfo", clientSessionContext);
 
     return accessToken;
   }
@@ -173,18 +171,30 @@ public class OIDCMapper
     }
   }
 
-  private ClaimsParameter getClaimsParameterFromContext(final ClientSessionContext context,
-                                                               final ClaimsParameter.TokenType tokenType) {
-    return Optional.ofNullable(context.getClientSession().getNotes().get("claims")).map(
-            c -> {
-              try {
-                return (Map<String, Object>) MAPPER.readerFor(Map.class).readValue(c);
-              } catch (final JsonProcessingException e) {
-                throw new RuntimeException(e);
-              }
-            })
-        .map(cp -> new ClaimsParameter(cp, tokenType))
-        .orElse(new ClaimsParameter(Map.of(), tokenType));
+  private ClaimsParameter getClaimsParameterFromContext(
+      final ClientSessionContext context,
+      final ClaimsParameter.TokenType tokenType) {
+
+    final ClaimsParameter claims = Optional.ofNullable(context.getClientSession().getNotes().get("claims")).map(c -> {
+      try {
+        return (Map<String, Object>) MAPPER.readerFor(Map.class).readValue(c);
+      } catch (final JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    }).map(cp -> new ClaimsParameter(cp, tokenType)).orElse(new ClaimsParameter(Map.of(), tokenType));
+
+    Arrays.stream(context.getScopeString(true).split(" "))
+        .forEach(scope -> {
+          if (Objects.nonNull(scope)) {
+            final ClaimsParameter other = ClaimsParameter.fromScope(scope);
+            if (Objects.nonNull(other)) {
+              log.infof("Created claims from scope %s", other.toString());
+              claims.merge(other);
+            }
+          }
+        });
+
+    return claims;
   }
 
   private void mapClaim(final IDToken accessToken, final AttributeClaim mapper, final Map<String, Object> claims) {
