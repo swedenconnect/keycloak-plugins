@@ -17,6 +17,7 @@
 package se.swedenconnect.keycloak.oidc;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -86,5 +87,75 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
             .map(Map.Entry::getKey)
             .collect(Collectors.toSet()))
         .orElse(Set.of());
+  }
+
+  /**
+   * Merges this claims parameter with other
+   *
+   * @param other to merge with
+   * @return this after resulting merge
+   */
+  public ClaimsParameter merge(final ClaimsParameter other) {
+    if (Objects.nonNull(other)) {
+      final Map<String, Object> idToken = (Map<String, Object>) other.claims.get("id_token");
+      if (Objects.nonNull(idToken)) {
+        idToken.keySet().forEach(key -> {
+          ((Map<String, Object>) this.claims.get("id_token")).put(key, idToken.get(key));
+        });
+      }
+      final Map<String, Object> userinfo = (Map<String, Object>) other.claims.get("userinfo");
+      if (Objects.nonNull(userinfo)) {
+        userinfo.keySet().forEach(key -> {
+          ((Map<String, Object>) this.claims.get("userinfo")).put(key, userinfo.get(key));
+        });
+      }
+    }
+    return this;
+  }
+
+  /**
+   * @param scope to create from
+   * @return new instance of scope is supported otherwise null
+   */
+  public static ClaimsParameter fromScope(final String scope) {
+    return switch (scope) {
+      case "https://id.oidc.se/scope/naturalPersonInfo" -> new ClaimsParameter(Map.of("userinfo", Map.of(
+          "family_name", Map.of(),
+          "given_name", Map.of(),
+          "middle_name", Map.of(),
+          "name", Map.of(),
+          "birthdate", Map.of()
+      )), null);
+      case "https://id.oidc.se/scope/naturalPersonOrgId" -> new ClaimsParameter(
+          Map.of("userinfo", Map.of(
+                  "name", Map.of(),
+                  "https://id.oidc.se/claim/orgName", Map.of(),
+                  "https://id.oidc.se/claim/orgNumber", Map.of(),
+                  "https://id.oidc.se/claim/orgAffiliation", Map.of("essential", true)
+              ),
+              "id_token", Map.of(
+                  "https://id.oidc.se/claim/orgAffiliation", Map.of("essential", true)
+              )), null);
+      case "https://id.oidc.se/scope/naturalPersonNumber" -> new ClaimsParameter(
+          Map.of("userinfo", Map.of(
+                  "https://id.oidc.se/claim/personalIdentityNumber", Map.of("essential", true),
+                  "https://id.oidc.se/claim/coordinationNumber", Map.of("essential", true)
+              ),
+              "id_token", Map.of(
+                  "https://id.oidc.se/claim/personalIdentityNumber", Map.of("essential", true),
+                  "https://id.oidc.se/claim/coordinationNumber", Map.of("essential", true)
+              )), null);
+
+      default -> null;
+    };
+  }
+
+  @Override
+  public String toString() {
+    final StringBuffer sb = new StringBuffer("ClaimsParameter{");
+    sb.append("claims=").append(this.claims);
+    sb.append(", tokenType=").append(this.tokenType);
+    sb.append('}');
+    return sb.toString();
   }
 }

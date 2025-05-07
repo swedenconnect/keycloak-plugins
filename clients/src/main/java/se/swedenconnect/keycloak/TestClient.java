@@ -136,7 +136,6 @@ public class TestClient implements HttpHandler {
 
     final Nonce nonce = new Nonce();
 
-
     final OIDCClaimsRequest claims = new OIDCClaimsRequest()
         .withUserInfoClaimsRequest(
             new ClaimsSetRequest(
@@ -152,7 +151,12 @@ public class TestClient implements HttpHandler {
         );
     final AuthenticationRequest request = new AuthenticationRequest.Builder(
         new ResponseType("code"),
-        new Scope("openid"),
+        new Scope(
+            "openid",
+            "https://id.oidc.se/scope/naturalPersonInfo",
+            "https://id.oidc.se/scope/naturalPersonNumber",
+            "https://id.oidc.se/scope/naturalPersonOrgId"
+        ),
         clientID,
         callback)
         .endpointURI(new URI(this.clientConfiguration.getAuthEndpoint()))
@@ -226,7 +230,6 @@ public class TestClient implements HttpHandler {
 
       final JWT idToken = successResponse.getOIDCTokens().getIDToken();
       final AccessToken accessToken = successResponse.getOIDCTokens().getAccessToken();
-      final RefreshToken refreshToken = successResponse.getOIDCTokens().getRefreshToken();
 
       final UserInfoRequest userInfoRequest =
           new UserInfoRequest(URI.create(this.clientConfiguration.getUserInfoEndpoint()), accessToken);
@@ -257,13 +260,10 @@ public class TestClient implements HttpHandler {
           userInfo:
           %s
                     
-          refreshToken:
-          %s
           """.formatted(
           this.prettyPrint(SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().toString(false)),
           this.prettyPrint(idToken.getJWTClaimsSet().toString(false)),
-          this.prettyPrint(jsonString),
-          this.prettyPrint(SignedJWT.parse(refreshToken.getValue()).getJWTClaimsSet().toString(false))
+          this.prettyPrint(jsonString)
       );
 
       exchange.sendResponseHeaders(200, payload.length());
