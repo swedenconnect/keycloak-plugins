@@ -18,8 +18,11 @@ package se.swedenconnect.keycloak.oidc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.ModelException;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
@@ -29,8 +32,10 @@ import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.IDToken;
+import org.keycloak.services.ErrorResponseException;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,6 +53,7 @@ public class OIDCMapper
     extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Logger log = Logger.getLogger(OIDCMapper.class);
 
   @Override
   public AccessToken transformAccessToken(
@@ -65,11 +71,13 @@ public class OIDCMapper
     final String username = userSessionModel.getUser().getUsername();
     accessToken.getOtherClaims().put("sub", username);
 
+    final Predicate<AttributeClaim> getAccessToken = AttributeClaim::getAccessToken;
+
     this.mapClaims(
         accessToken,
         userSessionModel,
         protocolMapperModel,
-        AttributeClaim::getAccessToken
+        getAccessToken
     );
 
     return accessToken;
@@ -83,12 +91,27 @@ public class OIDCMapper
       final UserSessionModel userSessionModel,
       final ClientSessionContext clientSessionContext) {
 
+    final ClaimsParameter claimsParameter =
+        this.getClaimsParameterFromContext(
+            clientSessionContext,
+            ClaimsParameter.TokenType.ID
+        );
+
+    final Predicate<AttributeClaim> getIdToken = AttributeClaim::getIdToken;
     this.mapClaims(
         idToken,
         userSessionModel,
         protocolMapperModel,
-        AttributeClaim::getIdToken
+        getIdToken.or(claimsParameter)
     );
+
+    final HashSet<String> requiredParams = new HashSet<>(claimsParameter.getRequiredParameters());
+    requiredParams.removeAll(idToken.getOtherClaims().keySet());
+    if (!requiredParams.isEmpty()) {
+      log.infof("Required claims %s could not be mapped for IDToken@client:%s", requiredParams,
+          clientSessionContext.getClientSession().getClient().getClientId());
+    }
+
     return idToken;
   }
 
@@ -100,12 +123,26 @@ public class OIDCMapper
       final UserSessionModel userSessionModel,
       final ClientSessionContext clientSessionContext) {
 
+    final ClaimsParameter claimsParameter = this.getClaimsParameterFromContext(
+        clientSessionContext,
+        ClaimsParameter.TokenType.USERINFO
+    );
+
+    final Predicate<AttributeClaim> getUserInfo = AttributeClaim::getUserInfo;
     this.mapClaims(
         accessToken,
         userSessionModel,
         protocolMapperModel,
-        AttributeClaim::getUserInfo
+        getUserInfo.or(claimsParameter)
     );
+
+    final HashSet<String> requiredParams = new HashSet<>(claimsParameter.getRequiredParameters());
+    requiredParams.removeAll(accessToken.getOtherClaims().keySet());
+    if (!requiredParams.isEmpty()) {
+      log.infof("Required claims %s could not be mapped for UserInfo@client:%s", requiredParams,
+          clientSessionContext.getClientSession().getClient().getClientId());
+    }
+
     return accessToken;
   }
 
@@ -134,6 +171,20 @@ public class OIDCMapper
     } catch (final JsonProcessingException e) {
       throw new IllegalArgumentException("Could not process arguments from SAML attributes", e);
     }
+  }
+
+  private ClaimsParameter getClaimsParameterFromContext(final ClientSessionContext context,
+                                                               final ClaimsParameter.TokenType tokenType) {
+    return Optional.ofNullable(context.getClientSession().getNotes().get("claims")).map(
+            c -> {
+              try {
+                return (Map<String, Object>) MAPPER.readerFor(Map.class).readValue(c);
+              } catch (final JsonProcessingException e) {
+                throw new RuntimeException(e);
+              }
+            })
+        .map(cp -> new ClaimsParameter(cp, tokenType))
+        .orElse(new ClaimsParameter(Map.of(), tokenType));
   }
 
   private void mapClaim(final IDToken accessToken, final AttributeClaim mapper, final Map<String, Object> claims) {
