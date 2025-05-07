@@ -29,21 +29,6 @@ public class AttributeToClaim {
 
   public static List<AttributeClaim> ATTRIBUTE_MAPPINGS = claimMappings();
 
-  public static Map<String, AttributeClaim> NON_DEFAULT_CLAIMS = Map.of(
-      "https://id.oidc.se/claim/userSignature", AttributeClaim.builder(
-              "urn:oid:1.2.752.201.3.11",
-              "https://id.oidc.se/claim/userSignature"
-          ).build(),
-      "https://id.oidc.se/claim/userCertificate", AttributeClaim.builder(
-              "urn:oid:1.2.752.201.3.10",
-              "https://id.oidc.se/claim/userCertificate"
-          ).build(),
-      "https://id.oidc.se/claim/authnEvidence", AttributeClaim.builder(
-              "urn:oid:1.2.752.201.3.13",
-              "https://id.oidc.se/claim/authnEvidence"
-          ).build()
-  );
-
   private static List<AttributeClaim> claimMappings() {
     final ArrayList<AttributeClaim> attributeClaims = new ArrayList<>();
 
@@ -106,6 +91,40 @@ public class AttributeToClaim {
         ).build()
     );
 
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.11",
+            "https://id.oidc.se/claim/userSignature"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.10",
+            "https://id.oidc.se/claim/userCertificate"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.13",
+            "https://id.oidc.se/claim/authnEvidence"
+        ).build()
+    );
+
     return attributeClaims;
+  }
+
+  /**
+   * Convert config to list of attribute claims
+   * @param config to convert
+   * @return list of mappings
+   */
+  public static List<AttributeClaim> fromConfiguration(final Map<String, String> config) {
+    return config
+        .entrySet()
+        .stream()
+        .map(entry -> new AttributeClaim(entry.getKey(), entry.getValue())
+    ).toList();
   }
 }
