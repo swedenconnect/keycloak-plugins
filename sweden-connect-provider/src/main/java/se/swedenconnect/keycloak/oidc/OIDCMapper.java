@@ -31,12 +31,10 @@ import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.IDToken;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,8 +43,10 @@ import java.util.function.Predicate;
 
 
 /**
- * Mapper that implments mapping according to
+ * Mapper that implements mapping according to
  * <a href="https://www.oidc.se/specifications/claim-mappings-to-other-specs.html">oidc.se</a>
+ * Can map claims from both SAML-IDP using {@link se.swedenconnect.keycloak.saml.SwedenConnectIdentityMapper}
+ * or OIDC-OP {@link SwedenConnectOIDCAttributeMapper}
  *
  * @author Felix Hellman
  */
@@ -69,10 +69,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
       final ClientSessionContext context) {
 
     accessToken.getOtherClaims().put("acr", null);
-    accessToken.setAuthorization(null);
     accessToken.setOtherClaims("client_id", context.getClientSession().getClient().getClientId());
-    log.infof("CONFIG %s", mapperModel.getConfig());
-
     this.mapClaims(
         accessToken,
         userSessionModel,
@@ -102,7 +99,12 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
       idToken.setAcr(acr);
     }
 
-    this.mapClaims(idToken, userSessionModel, claimsParameter, this.getTokenConfiguration(mapperModel, ATTRIBUTE_ID_TOKEN_KEY));
+    this.mapClaims(
+        idToken,
+        userSessionModel,
+        claimsParameter,
+        this.getTokenConfiguration(mapperModel, ATTRIBUTE_ID_TOKEN_KEY)
+    );
     logRequiredClaims(claimsParameter, idToken, "idtoken", context);
 
     return idToken;
@@ -145,7 +147,11 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
     final ClaimsParameter claimsParameter =
         this.getClaimsParameterFromContext(clientSessionContext, ClaimsParameter.TokenType.USERINFO);
 
-    this.mapClaims(accessToken, userSessionModel, claimsParameter, this.getTokenConfiguration(mapperModel, ATTRIBUTE_USERINFO_TOKEN_KEY));
+    this.mapClaims(accessToken,
+        userSessionModel,
+        claimsParameter,
+        this.getTokenConfiguration(mapperModel, ATTRIBUTE_USERINFO_TOKEN_KEY)
+    );
 
     logRequiredClaims(claimsParameter, accessToken, "userinfo", clientSessionContext);
 
@@ -158,19 +164,19 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
       final Predicate<AttributeClaim> shouldMap,
       final Map<String, String> config) {
 
-    final String json = userSessionModel.getNote("SAML_ATTRIBUTES_JSON");
-
+    final String json = Optional.ofNullable(userSessionModel.getNote("SAML_ATTRIBUTES_JSON"))
+        .orElse("{}");
     try {
       final Map<String, Object> claims = MAPPER.readerFor(Map.class).readValue(json);
       AttributeToClaim.ATTRIBUTE_MAPPINGS.forEach(mapper -> {
         if (shouldMap.negate().test(mapper)) {
           return;
         }
-        this.mapClaim(accessToken, mapper, claims);
+        this.mapClaim(accessToken, userSessionModel, mapper, claims);
       });
       //Do not check if claims from config should map or not
       AttributeToClaim.fromConfiguration(config).forEach(mapper -> {
-        this.mapClaim(accessToken, mapper, claims);
+        this.mapClaim(accessToken, userSessionModel, mapper, claims);
       });
     } catch (final JsonProcessingException e) {
       throw new IllegalArgumentException("Could not process arguments from SAML attributes", e);
@@ -187,7 +193,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
       } catch (final JsonProcessingException e) {
         throw new RuntimeException(e);
       }
-    }).map(cp -> new ClaimsParameter(cp, tokenType)).orElse(new ClaimsParameter(Map.of(), tokenType));
+    }).map(cp -> new ClaimsParameter(cp, tokenType)).orElse(new ClaimsParameter(new HashMap<>(), tokenType));
 
     Arrays.stream(context.getScopeString(true).split(" "))
         .forEach(scope -> {
@@ -202,8 +208,15 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
     return claims;
   }
 
-  private void mapClaim(final IDToken accessToken, final AttributeClaim mapper, final Map<String, Object> claims) {
-    final Object value = claims.get(mapper.getSamlAttributeName());
+  private void mapClaim(
+      final IDToken accessToken,
+      final UserSessionModel userSessionModel,
+      final AttributeClaim mapper, final Map<String, Object> claims) {
+
+    Object value = claims.get(mapper.getSamlAttributeName());
+    if (Objects.isNull(value)) {
+      value = userSessionModel.getUser().getAttributes().get(mapper.getSamlAttributeName());
+    }
     if (Objects.isNull(value)) {
       return;
     }

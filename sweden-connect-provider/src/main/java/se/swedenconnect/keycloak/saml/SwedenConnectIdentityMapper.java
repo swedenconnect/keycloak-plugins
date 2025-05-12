@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  */
-
 package se.swedenconnect.keycloak.saml;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -52,9 +51,9 @@ public class SwedenConnectIdentityMapper implements Module {
 
   /**
    * Processes identity of completed authentication.
+   *
    * @param mapperModel
    * @param context
-   *
    */
   public void process(
       final IdentityProviderMapperModel mapperModel,
@@ -62,9 +61,13 @@ public class SwedenConnectIdentityMapper implements Module {
 
     final AssertionType assertion = (AssertionType) context.getContextData().get("SAML_ASSERTION");
 
+    if (context.getIdp().getConfig().isTransientUsers()) {
+      this.populateUserAttributes(context, assertion);
+    }
     this.populateSessionAttributes(context, assertion);
-    this.setUserIdentity(mapperModel, context, assertion);
+
     this.setOtherUserProperties(context, assertion);
+    this.setUserIdentity(mapperModel, context, assertion);
 
     assertion.getStatements().forEach(statement -> {
       if (statement instanceof AuthnStatementType authn) {
@@ -106,6 +109,31 @@ public class SwedenConnectIdentityMapper implements Module {
           if (value.getName().equals("urn:oid:2.5.4.42")) {
             context.setUserAttribute("firstName", (String) value.getAttributeValue().getFirst());
           }
+        });
+  }
+
+  private void populateUserAttributes(
+      final BrokeredIdentityContext context,
+      final AssertionType assertion) {
+
+    assertion.getAttributeStatements().stream()
+        .flatMap(ast -> {
+          return ast.getAttributes().stream();
+        })
+        .map(AttributeStatementType.ASTChoiceType::getAttribute)
+        .filter(v -> !List.of(
+            "urn:oid:1.2.752.201.3.11",
+            "urn:oid:1.2.752.201.3.10",
+            "urn:oid:1.2.752.201.3.13"
+        ).contains(v.getName()))
+        .forEach(value -> {
+          final String first = value.getAttributeValue().stream()
+              .map(Object::toString)
+              .toList()
+              .stream().findFirst()
+              .get();
+
+          context.setUserAttribute(value.getName(), first);
         });
   }
 

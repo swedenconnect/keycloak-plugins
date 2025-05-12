@@ -16,6 +16,7 @@
  */
 package se.swedenconnect.keycloak.oidc;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -99,13 +100,21 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
     if (Objects.nonNull(other)) {
       final Map<String, Object> idToken = (Map<String, Object>) other.claims.get("id_token");
       if (Objects.nonNull(idToken)) {
-        idToken.keySet().forEach(key -> {
+        this.claims.put("id_token", new HashMap<String, Object>());
+        idToken.keySet()
+            .stream()
+            .filter(key -> Objects.nonNull(idToken.get(key)))
+            .forEach(key -> {
           ((Map<String, Object>) this.claims.get("id_token")).put(key, idToken.get(key));
         });
       }
       final Map<String, Object> userinfo = (Map<String, Object>) other.claims.get("userinfo");
+      this.claims.put("userinfo", new HashMap<String, Object>());
       if (Objects.nonNull(userinfo)) {
-        userinfo.keySet().forEach(key -> {
+        userinfo.keySet()
+            .stream()
+            .filter(key -> Objects.nonNull(userinfo.get(key)))
+            .forEach(key -> {
           ((Map<String, Object>) this.claims.get("userinfo")).put(key, userinfo.get(key));
         });
       }
