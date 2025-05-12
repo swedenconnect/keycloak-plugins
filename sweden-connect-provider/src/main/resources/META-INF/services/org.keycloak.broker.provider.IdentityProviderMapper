@@ -1,1 +1,2 @@
 se.swedenconnect.keycloak.saml.SwedenConnectAttributeMapper
+se.swedenconnect.keycloak.oidc.SwedenConnectOIDCAttributeMapper

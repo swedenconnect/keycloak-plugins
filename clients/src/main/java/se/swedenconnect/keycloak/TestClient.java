@@ -35,7 +35,6 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
@@ -93,6 +92,7 @@ public class TestClient implements HttpHandler {
 
   /**
    * Constructor.
+   *
    * @param clientConfiguration
    * @throws IOException
    */
@@ -103,6 +103,7 @@ public class TestClient implements HttpHandler {
 
   /**
    * Program entrypoint.
+   *
    * @param args
    * @throws URISyntaxException
    * @throws IOException
@@ -153,9 +154,7 @@ public class TestClient implements HttpHandler {
         new ResponseType("code"),
         new Scope(
             "openid",
-            "https://id.oidc.se/scope/naturalPersonInfo",
-            "https://id.oidc.se/scope/naturalPersonNumber",
-            "https://id.oidc.se/scope/naturalPersonOrgId"
+            "https://id.oidc.se/scope/naturalPersonNumber"
         ),
         clientID,
         callback)
