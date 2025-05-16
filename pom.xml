@@ -29,12 +29,14 @@
     <modules>
         <module>sweden-connect-provider</module>
         <module>clients</module>
+        <module>keycloak-login-customizer</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <keycloak.version>26.2.2</keycloak.version>
     </properties>
 
     <dependencyManagement>
@@ -42,7 +44,7 @@
             <dependency>
                 <groupId>org.keycloak</groupId>
                 <artifactId>keycloak-parent</artifactId>
-                <version>26.2.2</version>
+                <version>${keycloak.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

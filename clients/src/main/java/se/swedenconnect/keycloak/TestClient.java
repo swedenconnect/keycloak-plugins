@@ -190,7 +190,7 @@ public class TestClient implements HttpHandler {
     try {
       final AuthenticationResponse response = AuthenticationResponseParser.parse(
           new URI("http://localhost:1337/cb?" + exchange.getRequestURI().toString()));
-
+      System.out.println(exchange.getRequestURI().toString());
       if (response instanceof AuthenticationErrorResponse) {
         System.err.println(response.toErrorResponse().getErrorObject());
         return;
