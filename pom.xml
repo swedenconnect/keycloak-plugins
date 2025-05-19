@@ -28,7 +28,7 @@
 
     <modules>
         <module>sweden-connect-provider</module>
-        <module>clients</module>
+        <module>tools</module>
         <module>keycloak-login-customizer</module>
     </modules>
 
