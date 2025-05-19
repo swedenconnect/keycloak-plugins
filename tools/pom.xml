@@ -7,7 +7,7 @@
         <version>0.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>clients</artifactId>
+    <artifactId>tools</artifactId>
     <packaging>jar</packaging>
 
     <name>Example Clients</name>

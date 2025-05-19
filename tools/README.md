@@ -13,4 +13,8 @@ client:
   auth-endpoint: 
   token-endpoint: 
   userinfo-endpoint: 
+clientcredential:
+  client-id: 
+  client-secret: 
+  token-endpoint: 
 ```
