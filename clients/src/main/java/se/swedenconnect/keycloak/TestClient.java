@@ -58,12 +58,22 @@ import javax.net.ssl.TrustManager;
 import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.CookieManager;
+import java.net.CookieStore;
+import java.net.HttpCookie;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /**
  * Test Utility for debugging keycloak plugins.
@@ -89,16 +99,23 @@ public class TestClient implements HttpHandler {
   private final HttpServer server;
   private final State state = new State();
   private final ClientConfiguration clientConfiguration;
+  private final AtomicBoolean active = new AtomicBoolean(false);
+  private final AtomicBoolean headless;
+  private TestClientJsonResponse response;
+
 
   /**
    * Constructor.
    *
    * @param clientConfiguration
+   * @param headless
    * @throws IOException
    */
-  public TestClient(final ClientConfiguration clientConfiguration) throws IOException {
+  public TestClient(final ClientConfiguration clientConfiguration,
+                    final Boolean headless) throws IOException {
     this.server = HttpServer.create(new InetSocketAddress(1337), 0);
     this.clientConfiguration = clientConfiguration;
+    this.headless = new AtomicBoolean(headless);
   }
 
   /**
@@ -108,10 +125,11 @@ public class TestClient implements HttpHandler {
    * @throws URISyntaxException
    * @throws IOException
    */
-  public static void main(final String[] args) throws URISyntaxException, IOException {
+  public static void main(final String[] args) throws Exception {
     final Map<String, String> client = readClientConfiguration();
-    final TestClient testClient = new TestClient(new ClientConfiguration(client));
-    testClient.startAuthorization();
+    final TestClient testClient = new TestClient(new ClientConfiguration(client), false);
+    testClient.startAuth(a -> {
+    });
   }
 
   private static Map<String, String> readClientConfiguration() {
@@ -131,7 +149,14 @@ public class TestClient implements HttpHandler {
     return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
   }
 
-  private void startAuthorization() throws URISyntaxException, IOException {
+
+  /**
+   * Starts auth flow.
+   *
+   * @param customizer
+   * @throws Exception
+   */
+  public void startAuth(final Consumer<AuthenticationRequest.Builder> customizer) throws Exception {
     final ClientID clientID = new ClientID(this.clientConfiguration.getClientId());
     final URI callback = new URI("http://localhost:1337/cb");
 
@@ -150,26 +175,81 @@ public class TestClient implements HttpHandler {
                     .withClaimRequirement(ClaimRequirement.ESSENTIAL))
             )
         );
-    final AuthenticationRequest request = new AuthenticationRequest.Builder(
+    final AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(
         new ResponseType("code"),
-        new Scope(
-            "openid",
-            "https://id.oidc.se/scope/naturalPersonNumber"
-        ),
+        new Scope("openid"),
         clientID,
         callback)
         .endpointURI(new URI(this.clientConfiguration.getAuthEndpoint()))
         .state(this.state)
         .nonce(nonce)
         .claims(claims)
-        .resource(URI.create("https://api.local.test"))
+        .resource(URI.create("https://api.local.test"));
+
+    customizer.accept(builder);
+
+    final AuthenticationRequest request = builder
         .build();
 
-    System.out.println(request.toURI());
+    final SSLContext ctx = SSLContext.getInstance("TLS");
+    ctx.init(null, new TrustManager[]{new NoTrust()}, null);
 
-    openWebpage(request.toURI());
+    final HTTPRequest httpRequest = request.toHTTPRequest();
+    httpRequest.setSSLSocketFactory(ctx.getSocketFactory());
+    httpRequest.setHostnameVerifier(new NoopHostnameVerifier());
+
+    final HttpClient client = HttpClient.newBuilder()
+        .cookieHandler(new CookieManager(new CookieStore() {
+          private final List<HttpCookie> cookies = new ArrayList<>();
+
+          @Override
+          public void add(final URI uri, final HttpCookie cookie) {
+            this.cookies.add(cookie);
+          }
+
+          @Override
+          public List<HttpCookie> get(final URI uri) {
+            return this.cookies;
+          }
+
+          @Override
+          public List<HttpCookie> getCookies() {
+            return this.cookies;
+          }
+
+          @Override
+          public List<URI> getURIs() {
+            return List.of();
+          }
+
+          @Override
+          public boolean remove(final URI uri, final HttpCookie cookie) {
+            return false;
+          }
+
+          @Override
+          public boolean removeAll() {
+            return false;
+          }
+        }, (uri, cookie) -> true))
+        .sslContext(ctx)
+        .followRedirects(HttpClient.Redirect.ALWAYS)
+        .build();
+
     this.server.createContext("/cb", this);
+    this.server.setExecutor(Executors.newSingleThreadExecutor());
+    this.active.set(true);
     this.server.start();
+    if (this.headless.get()) {
+      final HttpResponse<String> send = client.send(
+          HttpRequest.newBuilder().uri(request.toURI()).build(),
+          HttpResponse.BodyHandlers.ofString()
+      );
+      System.out.println(send.headers());
+      System.out.println(send.body());
+    } else {
+      openWebpage(request.toURI());
+    }
   }
 
   private static boolean openWebpage(final URI uri) {
@@ -196,11 +276,7 @@ public class TestClient implements HttpHandler {
         return;
       }
 
-
       final AuthorizationCode code = response.toSuccessResponse().getAuthorizationCode();
-
-      System.out.println(response.toSuccessResponse());
-
       final URI callback = new URI("http://localhost:1337/cb");
       final AuthorizationGrant codeGrant = new AuthorizationCodeGrant(code, callback);
 
@@ -241,38 +317,61 @@ public class TestClient implements HttpHandler {
       final HTTPResponse userInfoResponse = userInfoRequestHTTPRequest.send();
       final UserInfoResponse parsedUserInfo = UserInfoResponse.parse(userInfoResponse);
 
-      String jsonString = "";
+      String userInfoString = "";
+      Map<String, Object> userInfoMap = Map.of();
 
       if (parsedUserInfo.indicatesSuccess()) {
-        jsonString = parsedUserInfo.toSuccessResponse().getUserInfo().toJSONString();
+        userInfoString = parsedUserInfo.toSuccessResponse().getUserInfo().toJSONString();
+        userInfoMap = parsedUserInfo.toSuccessResponse().getUserInfo().toJSONObject();
       } else {
-        jsonString = parsedUserInfo.toErrorResponse().getErrorObject().toJSONObject().toString();
+        userInfoString = parsedUserInfo.toErrorResponse().getErrorObject().toJSONObject().toString();
       }
 
-      final String payload = """
-          accessToken:
-          %s
-                    
-          idToken:
-          %s
-                    
-          userInfo:
-          %s
-                    
-          """.formatted(
-          this.prettyPrint(SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().toString(false)),
-          this.prettyPrint(idToken.getJWTClaimsSet().toString(false)),
-          this.prettyPrint(jsonString)
+      this.response = new TestClientJsonResponse(
+          SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().getClaims(),
+          idToken.getJWTClaimsSet().getClaims(),
+          userInfoMap
       );
 
-      exchange.sendResponseHeaders(200, payload.length());
-      exchange.getResponseBody().write(payload.getBytes(StandardCharsets.UTF_8));
+      if (this.headless.get()) {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final String payload = objectMapper.writerFor(TestClientJsonResponse.class).writeValueAsString(this.response);
+        exchange.sendResponseHeaders(200, payload.length());
+        exchange.getResponseBody().write(payload.getBytes(StandardCharsets.UTF_8));
+      } else {
+        final String payload = """
+            accessToken:
+            %s
+                      
+            idToken:
+            %s
+                      
+            userInfo:
+            %s
+                      
+            """.formatted(
+            this.prettyPrint(SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().toString(false)),
+            this.prettyPrint(idToken.getJWTClaimsSet().toString(false)),
+            this.prettyPrint(userInfoString)
+        );
+        exchange.sendResponseHeaders(200, payload.length());
+        exchange.getResponseBody().write(payload.getBytes(StandardCharsets.UTF_8));
+      }
+
     } catch (final Exception e) {
       exchange.sendResponseHeaders(500, e.getMessage().length());
       exchange.getResponseBody().write(e.getMessage().getBytes(StandardCharsets.UTF_8));
       throw new RuntimeException(e);
     } finally {
+      this.active.set(false);
       this.server.stop(0);
     }
+  }
+
+  /**
+   * @return response
+   */
+  public TestClientJsonResponse getResponse() {
+    return this.response;
   }
 }
