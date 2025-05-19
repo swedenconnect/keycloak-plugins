@@ -51,6 +51,11 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Implmenets a mock auth server to be used in integration tests.
+ *
+ * @author Felix Hellman
+ */
 public class TestAuthServer {
   public static final ObjectMapper MAPPER = new ObjectMapper();
   private final AtomicBoolean active = new AtomicBoolean(false);
@@ -65,13 +70,20 @@ public class TestAuthServer {
   private static final Pattern QUERY_REGEX = Pattern.compile("^(?<key>[a-z_-]*)=(?<value>.*)$");
 
 
+  /**
+   * Constructor.
+   * @throws Exception
+   */
   public TestAuthServer() throws Exception {
     this.port = 60000 + new Random().nextInt(2000);
     this.server = HttpServer.create(new InetSocketAddress(this.port), 0);
   }
 
+  /**
+   * @throws Exception
+   */
   public void start() throws Exception {
-    server.createContext("/auth", exchange -> {
+    this.server.createContext("/auth", exchange -> {
       final String[] split = exchange.getRequestURI().getQuery().split("&");
       final Map<String, String> queryParams = new HashMap<>();
       Arrays.stream(split)
@@ -92,7 +104,7 @@ public class TestAuthServer {
       exchange.getResponseHeaders().add("Location", redirect);
       exchange.sendResponseHeaders(302, 0);
     });
-    server.createContext("/token", exchange -> {
+    this.server.createContext("/token", exchange -> {
 
       final String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
       final String[] split = body.split("&");
@@ -114,7 +126,7 @@ public class TestAuthServer {
             .issuer("http://host.docker.internal:%d".formatted(this.port))
             .claim("nonce", this.codeToNonceMap.get((String) request.get("code")));
 
-        accessTokenCustomizers.forEach(customizer -> {
+        this.accessTokenCustomizers.forEach(customizer -> {
           customizer.accept(accessTokenBuilder);
         });
 
@@ -130,7 +142,7 @@ public class TestAuthServer {
             .claim("nonce", this.codeToNonceMap.get((String) request.get("code")))
             .issuer("http://host.docker.internal:%d".formatted(this.port));
 
-        idTokenCustomizers.forEach(customizer -> {
+        this.idTokenCustomizers.forEach(customizer -> {
           customizer.accept(idTokenBuilder);
         });
 
@@ -157,7 +169,7 @@ public class TestAuthServer {
         System.out.println(e.getMessage());
       }
     });
-    server.createContext("/certs", exchange -> {
+    this.server.createContext("/certs", exchange -> {
       final Map<String, Object> keys = new JWKSet(this.signKey)
           .toPublicJWKSet()
           .toJSONObject();
@@ -167,7 +179,7 @@ public class TestAuthServer {
       exchange.sendResponseHeaders(200, payload.length());
       exchange.getResponseBody().write(payload.getBytes(StandardCharsets.UTF_8));
     });
-    server.createContext("/userinfox", exchange -> {
+    this.server.createContext("/userinfox", exchange -> {
       try {
         System.out.println("USERINFO REQUEST");
         final JWTClaimsSet.Builder userInfoBuilder = new JWTClaimsSet.Builder()
@@ -175,7 +187,7 @@ public class TestAuthServer {
             .issueTime(Date.from(Instant.now()))
             .issuer("http://host.docker.internal:1338");
 
-        userInfoCustomizers.forEach(customizer -> {
+        this.userInfoCustomizers.forEach(customizer -> {
           customizer.accept(userInfoBuilder);
         });
 
@@ -214,22 +226,41 @@ public class TestAuthServer {
     throw new JOSEException("Unsupported key type");
   }
 
+  /**
+   * Add customizer to id token.
+   * @param customizer to add.
+   * @return this
+   */
   public TestAuthServer withIdTokenCustomizer(final Consumer<JWTClaimsSet.Builder> customizer) {
     this.idTokenCustomizers.add(customizer);
     return this;
   }
 
+  /**
+   * Add customizer to access token.
+   * @param customizer to add.
+   * @return this
+   */
   public TestAuthServer withAccessTokenCustomizer(final Consumer<JWTClaimsSet.Builder> customizer) {
     this.accessTokenCustomizers.add(customizer);
     return this;
   }
 
+
+  /**
+   * Add customizer to userinfo.
+   * @param customizer to add.
+   * @return this
+   */
   public TestAuthServer withUserInfoCustomizer(final Consumer<JWTClaimsSet.Builder> customizer) {
     this.userInfoCustomizers.add(customizer);
     return this;
   }
 
+  /**
+   * @return port
+   */
   public Integer getPort() {
-    return port;
+    return this.port;
   }
 }

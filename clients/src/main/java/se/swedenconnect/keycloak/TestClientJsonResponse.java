@@ -20,11 +20,22 @@ import net.minidev.json.JSONObject;
 
 import java.util.Map;
 
+/**
+ * Json response from test client.
+ *
+ * @author Felix Hellman
+ */
 public class TestClientJsonResponse {
   private final JSONObject accessToken;
   private final JSONObject idToken;
   private final JSONObject userInfo;
 
+  /**
+   * Constructor.
+   * @param accessToken
+   * @param idToken
+   * @param userInfo
+   */
   public TestClientJsonResponse(final Map<String, Object> accessToken,
                                 final Map<String, Object> idToken,
                                 final Map<String, Object> userInfo) {
@@ -34,25 +45,32 @@ public class TestClientJsonResponse {
     this.userInfo = new JSONObject(userInfo);
   }
 
+  /**
+   * @return access token
+   */
   public JSONObject getAccessToken() {
     return this.accessToken;
   }
 
+  /**
+   * @return id token
+   */
   public JSONObject getIdToken() {
     return this.idToken;
   }
 
+  /**
+   * @return user info
+   */
   public JSONObject getUserInfo() {
     return this.userInfo;
   }
 
   @Override
   public String toString() {
-    final StringBuffer sb = new StringBuffer("TestClientJsonResponse{");
-    sb.append("accessToken=").append(accessToken);
-    sb.append(", idToken=").append(idToken);
-    sb.append(", userInfo=").append(userInfo);
-    sb.append('}');
-    return sb.toString();
+    return "TestClientJsonResponse{" + "accessToken=" + this.accessToken +
+        ", idToken=" + this.idToken +
+        ", userInfo=" + this.userInfo +
+        '}';
   }
 }

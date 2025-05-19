@@ -59,7 +59,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.CookieManager;
-import java.net.CookiePolicy;
 import java.net.CookieStore;
 import java.net.HttpCookie;
 import java.net.InetSocketAddress;
@@ -70,11 +69,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -107,10 +103,12 @@ public class TestClient implements HttpHandler {
   private final AtomicBoolean headless;
   private TestClientJsonResponse response;
 
+
   /**
    * Constructor.
    *
    * @param clientConfiguration
+   * @param headless
    * @throws IOException
    */
   public TestClient(final ClientConfiguration clientConfiguration,
@@ -151,11 +149,12 @@ public class TestClient implements HttpHandler {
     return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
   }
 
+
   /**
-   * Starts auth flow
+   * Starts auth flow.
    *
-   * @throws URISyntaxException
-   * @throws IOException
+   * @param customizer
+   * @throws Exception
    */
   public void startAuth(final Consumer<AuthenticationRequest.Builder> customizer) throws Exception {
     final ClientID clientID = new ClientID(this.clientConfiguration.getClientId());
@@ -369,7 +368,10 @@ public class TestClient implements HttpHandler {
     }
   }
 
+  /**
+   * @return response
+   */
   public TestClientJsonResponse getResponse() {
-    return response;
+    return this.response;
   }
 }
