@@ -18,7 +18,6 @@ package se.swedenconnect.keycloak.oidc;
 
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
-import org.jboss.logging.Logger;
 import org.keycloak.broker.oidc.KeycloakOIDCIdentityProvider;
 import org.keycloak.broker.oidc.OIDCIdentityProviderConfig;
 import org.keycloak.broker.provider.AuthenticationRequest;
@@ -33,7 +32,7 @@ import java.util.List;
  * @author Felix Hellman
  */
 public class ProxyProvider extends KeycloakOIDCIdentityProvider {
-  
+
   private static final List<String> PROXIED_SCOPES = List.of(
       "https://id.oidc.se/scope/naturalPersonNumber",
       "https://id.oidc.se/scope/naturalPersonInfo",
