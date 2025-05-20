@@ -22,6 +22,7 @@ import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.models.IdentityProviderMapperModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.JsonWebToken;
 
 import java.util.HashMap;
@@ -31,6 +32,10 @@ import java.util.Optional;
 
 /**
  * UserAttributeMapper for OIDC.
+ * Reads claims from underlying OP Access and ID Token and populates session notes
+ * keyed with their respective SAML attribute name. <br/>
+ * E.g. family_name gets saved with the "urn:oid:2.5.4.4" key.
+ * This makes the {@link OIDCMapper} reusable for OIDC.
  *
  * @author Felix Hellman
  */
@@ -95,7 +100,7 @@ public class SwedenConnectOIDCAttributeMapper extends UserAttributeMapper {
 
   @Override
   public String getId() {
-    return "SwedenConnect-OP";
+    return "Sweden-Connect-OP";
   }
 
   @Override
@@ -105,11 +110,16 @@ public class SwedenConnectOIDCAttributeMapper extends UserAttributeMapper {
 
   @Override
   public String getDisplayType() {
-    return "SwedenConnect-OP";
+    return "Sweden-Connect ";
   }
 
   @Override
   public String getHelpText() {
     return "OP Provider for Sweden Connect";
+  }
+
+  @Override
+  public List<ProviderConfigProperty> getConfigMetadata() {
+    return List.of();
   }
 }

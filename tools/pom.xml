@@ -4,7 +4,7 @@
     <parent>
         <groupId>se.swedenconnect.keycloak</groupId>
         <artifactId>keycloak-plugins-parent</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.2</version>
     </parent>
 
     <artifactId>tools</artifactId>
