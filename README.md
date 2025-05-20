@@ -1,44 +1,29 @@
+![Logo](docs/images/sweden-connect.png)
+
 # Keycloak Plugins
 
-Plugins for KeyCloak
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.bankid/bankid-idp/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.bankid/bankid-idp)
 
-## Sweden Connect
+Keycloak Plugins for use with Sweden Connect Federation
 
-Implements the following
+-----
 
-| Module                       | Type                                     | Description                                                                                                                        |
-|------------------------------|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| OIDCMapper                   | Client Scope                             | Maps Session Notes and User Information from SAML to OIDC                                                                          |
-| SwedenConnectAttributeMapper | SAML Attribute Import + Metadata Updater | Saves SAML attributes to the session and <br/>modifies keycloak SP metadata to conform with Sweden Connect Attribute Specification |
+## About
 
+This repository consists of a keycloak plugins to use keycloak in accordance to [Swedish eID Framework](https://docs.swedenconnect.se/technical-framework/).
 
-## Configuration
+## Documentation
 
-### SAML
+> TODO
 
-With your IDP, add a new Mapper of type "Sweden Connect".
-Select which SAML attribute should map towards the user's username.
-Add Additional Entity Categories that your service provider should expose in its metadata.
+## Contributing
 
-**Note** Currently this is done with a key/value mapping however the key is ignored and only needs to be unique.
+> TODO
 
-See example.
-![Example Configuration](./docs/images/example-mapper-configuration.png)
+## License
 
+The Keycloak Plugins is Open Source software released under the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
 
-### OIDC
+-----
 
-Add "Sweden Connect" as a default scope mapper for a given client.
-
-Additional claims that you might be interested in can be enabled per client by toggling that scope to enabled in the client scope.
-![Example Configuration](./docs/images/example-client-scope-configuration.png)
-
-## Installation
-To install the plugins they need to be built and mounted to `/opt/keycloak/providers/*.jar` in your keycloak instance.
-
-**E.g.**
-```bash
-    mvn clean install
-    cp target/sweden.connect-<version>.jar <keycloak_contaier_root>/opt/keycloak/providers/sweden.
-    connect-<version>.jar
-```
+Copyright &copy; 2025, [Myndigheten för digital förvaltning - Swedish Agency for Digital Government (DIGG)](http://www.digg.se). Licensed under version 2.0 of the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
