@@ -1,0 +1,11 @@
+name: Automated review steps
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    uses: swedenconnect/openid-federation-commons/.github/workflows/reusable-review.yml@main
+    secrets: inherit
+    with:
+      require-gh-docker: false
