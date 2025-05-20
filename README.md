@@ -2,7 +2,8 @@
 
 # Keycloak Plugins
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.bankid/bankid-idp/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.swedenconnect.bankid/bankid-idp)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+![Version](https://img.shields.io/badge/Version-_0.2-yellow)
 
 Keycloak Plugins for use with Sweden Connect Federation
 
@@ -14,11 +15,13 @@ This repository consists of a keycloak plugins to use keycloak in accordance to 
 
 ## Documentation
 
-> TODO
+- [Sweden Connect Provider](docs/sweden-connect-provider.MD)
+- [Keycloak Login Customizer](docs/keycloak-login-customizer.MD)
+- [Tools](docs/tools.MD)
 
 ## Contributing
 
-> TODO
+Pull requests are welcome. See the [Contributor Guidelines](CONTRIBUTING.md) for details.
 
 ## License
 

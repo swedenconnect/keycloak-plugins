@@ -37,7 +37,7 @@ public class IntegrationIT {
     keycloakContainer.setLogConsumers(List.of(c -> log.info(c.getUtf8String())));
     keycloakContainer.withAccessToHost(true)
         .withCopyFileToContainer(
-            MountableFile.forHostPath("target/sweden-connect-provider-0.2-SNAPSHOT.jar"),
+            MountableFile.forHostPath("target/sweden-connect-provider-0.2.jar"),
         "/opt/keycloak/providers/")
         .start();
   }

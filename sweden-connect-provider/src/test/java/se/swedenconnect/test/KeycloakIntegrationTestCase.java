@@ -20,21 +20,13 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.jetbrains.annotations.NotNull;
 import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.representations.idm.ClientRepresentation;
-import org.keycloak.representations.idm.ClientScopeRepresentation;
-import org.keycloak.representations.idm.ProtocolMapperRepresentation;
 import se.swedenconnect.keycloak.ClientConfiguration;
 import se.swedenconnect.keycloak.TestAuthServer;
 import se.swedenconnect.keycloak.TestClient;
 import se.swedenconnect.keycloak.TestClientJsonResponse;
-import se.swedenconnect.keycloak.oidc.ResourceMapper;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -70,7 +62,6 @@ public class KeycloakIntegrationTestCase {
     authServer.start();
 
     testClient.startAuth(requestCustomizer);
-    Thread.sleep(1_000_000L);
 
     while (Objects.isNull(testClient.getResponse())) {
       //Wait for test to complete
