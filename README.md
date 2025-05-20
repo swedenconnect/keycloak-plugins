@@ -11,7 +11,7 @@ Keycloak Plugins for use with Sweden Connect Federation
 
 ## About
 
-This repository consists of a keycloak plugins to use keycloak in accordance to [Swedish eID Framework](https://docs.swedenconnect.se/technical-framework/).
+This repository consists of a keycloak plugins to use in accordance to [Swedish eID Framework](https://docs.swedenconnect.se/technical-framework/).
 
 ## Documentation
 
