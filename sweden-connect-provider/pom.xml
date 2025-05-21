@@ -22,7 +22,7 @@
     <parent>
         <artifactId>keycloak-plugins-parent</artifactId>
         <groupId>se.swedenconnect.keycloak</groupId>
-        <version>0.2</version>
+        <version>0.3-SNAPSHOT</version>
     </parent>
 
     <artifactId>sweden-connect-provider</artifactId>
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>se.swedenconnect.keycloak</groupId>
             <artifactId>tools</artifactId>
-            <version>0.2</version>
+            <version>0.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
