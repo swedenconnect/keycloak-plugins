@@ -53,8 +53,10 @@ resource request.
 To simplify use of proxy realms with SAML the following utility key providers has been implemented.
 - shareable-ec-key
 - shareable-rsa-key
+- shareable-rsa-enc-key
 - shared-ec-key
 - shared-rsa-key
+- shared-rsa-enc-key
 
 The `sherable` keys are keys that can be distributed between realms.
 They have a configuration property to allow which realms can access them.

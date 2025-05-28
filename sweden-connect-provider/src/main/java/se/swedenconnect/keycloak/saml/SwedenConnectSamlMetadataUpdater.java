@@ -16,21 +16,25 @@
  */
 package se.swedenconnect.keycloak.saml;
 
+import jakarta.enterprise.inject.spi.CDI;
 import org.keycloak.dom.saml.v2.mdui.LogoType;
 import org.keycloak.dom.saml.v2.mdui.UIInfoType;
 import org.keycloak.dom.saml.v2.metadata.ContactType;
 import org.keycloak.dom.saml.v2.metadata.ContactTypeType;
+import org.keycloak.dom.saml.v2.metadata.EndpointType;
 import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
 import org.keycloak.dom.saml.v2.metadata.ExtensionsType;
+import org.keycloak.dom.saml.v2.metadata.IndexedEndpointType;
 import org.keycloak.dom.saml.v2.metadata.LocalizedNameType;
 import org.keycloak.dom.saml.v2.metadata.LocalizedURIType;
 import org.keycloak.dom.saml.v2.metadata.OrganizationType;
 import org.keycloak.dom.saml.v2.metadata.RequestedAttributeType;
+import org.keycloak.dom.saml.v2.metadata.SPSSODescriptorType;
 import org.keycloak.models.IdentityProviderMapperModel;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmProvider;
 import org.keycloak.protocol.saml.mappers.SamlMetadataDescriptorUpdater;
 import org.keycloak.provider.ProviderConfigProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import se.swedenconnect.keycloak.oidc.AttributeToClaim;
@@ -38,8 +42,10 @@ import se.swedenconnect.keycloak.oidc.AttributeToClaim;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Responsible for updating service provider metadata.
@@ -47,7 +53,6 @@ import java.util.Optional;
  * @author Felix Hellman
  */
 public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDescriptorUpdater {
-
   /**
    * Attribute key for entity categories.
    */
@@ -131,6 +136,41 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
       final IdentityProviderMapperModel mapperModel,
       final EntityDescriptorType entityDescriptor) {
 
+    final KeycloakSession session = CDI.current().select(KeycloakSession.class).get();
+
+    final Set<RealmProvider> realmProviders = session.getAllProviders(RealmProvider.class);
+    final RealmProvider realmProvider = realmProviders.stream().findFirst().get();
+
+    final List<IndexedEndpointType> assertionConsumers = new ArrayList<>();
+    realmProvider.getRealmsStream()
+        .forEach(r -> {
+          r.getIdentityProvidersStream()
+              .filter(idp -> idp.getConfig().containsKey("entityId"))
+              .filter(idp -> idp.getConfig().get("entityId").equals(entityDescriptor.getEntityID()))
+              .forEach(idp -> {
+                final Optional<IdentityProviderMapperModel> first = r.getIdentityProviderMappersStream()
+                    .filter(mapper -> mapper.getIdentityProviderAlias().equals(idp.getAlias()))
+                    .findFirst();
+                if (first.isPresent()) {
+                  final IdentityProviderMapperModel foundMapperModel = first.get();
+                  final int index = Integer.parseInt(idp.getConfig().get("attributeConsumingServiceIndex"));
+
+                  final IndexedEndpointType assertionConsumer = new IndexedEndpointType(
+                      URI.create("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                      URI.create("%srealms/%s/broker/%s/endpoint"
+                          .formatted(
+                              session.getContext().getUri().getBaseUri().toString(),
+                              r.getName(),
+                              idp.getAlias()
+                          )
+                      )
+                  );
+                  assertionConsumer.setIndex(index);
+                  assertionConsumers.add(assertionConsumer);
+                }
+              });
+        });
+
     entityDescriptor.setOrganization(new OrganizationType());
 
     Optional.ofNullable(mapperModel.getConfig().get(ATTRIBUTE_ORG_EN_NAME)).ifPresent(orgName -> {
@@ -165,10 +205,41 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
       entityDescriptor.getOrganization().addOrganizationURL(createLocalizedUri("sv", uri));
     });
 
+    final SPSSODescriptorType spDescriptor = entityDescriptor.getChoiceType().getFirst()
+        .getDescriptors().getFirst()
+        .getSpDescriptor();
+
+    assertionConsumers.forEach(
+        endpt -> {
+          final boolean exists = spDescriptor.getSingleLogoutService().stream()
+              .anyMatch(internal -> internal.getLocation().equals(endpt.getLocation()));
+          if (!exists) {
+            spDescriptor.addSingleLogoutService(new EndpointType(
+                URI.create("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"),
+                endpt.getLocation()
+            ));
+          }
+        });
+
+    assertionConsumers
+        .forEach(endpt -> {
+          final boolean exists = spDescriptor.getAssertionConsumerService().stream()
+              .anyMatch(internal -> internal.getLocation().equals(endpt.getLocation()));
+          if (!exists) {
+            spDescriptor.addAssertionConsumerService(endpt);
+          }
+        });
+
+
     entityDescriptor.getChoiceType().forEach(edtChoiceType -> {
       edtChoiceType.getDescriptors().forEach(edtDescriptorChoiceType -> {
         edtDescriptorChoiceType.getSpDescriptor()
             .getAttributeConsumingService().forEach(attributeConsumingServiceType -> {
+              final LocalizedNameType serviceName = new LocalizedNameType("en");
+              serviceName.setValue("sweden-connect");
+              final List<LocalizedNameType> names = new ArrayList<>(attributeConsumingServiceType.getServiceName());
+              names.forEach(attributeConsumingServiceType::removeServiceName);
+              attributeConsumingServiceType.addServiceName(serviceName);
               AttributeToClaim.ATTRIBUTE_MAPPINGS.forEach(r -> {
                 attributeConsumingServiceType
                     .addRequestedAttribute(

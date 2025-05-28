@@ -43,10 +43,6 @@ public class SharedKeyModelLoader {
   public static Optional<ComponentModel> loadModel(final KeycloakSession session, final ComponentModel model) {
     final Set<RealmProvider> realmProviders = session.getAllProviders(RealmProvider.class);
 
-    if (model.getConfig().get(Attributes.KEY_USE) == null) {
-      model.put(Attributes.KEY_USE, KeyUse.SIG.name());
-    }
-
     final String realmName = Optional.ofNullable(model.getConfig().get("sharedRealmName")).orElse(List.of())
         .stream()
         .findFirst()

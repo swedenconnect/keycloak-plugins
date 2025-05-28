@@ -66,7 +66,7 @@ public class SwedenConnectAttributeMapper extends UserAttributeMapper {
 
   @Override
   public String getId() {
-    return "Sweden-Connect";
+    return "Sweden-Connect-SAML-Mapper";
   }
 
   @Override
