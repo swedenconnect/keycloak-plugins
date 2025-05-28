@@ -46,3 +46,18 @@ resource request.
 ### Config
 
 ![](images/resource-mapper-example.png)
+
+
+### Key Providers
+
+To simplify use of proxy realms with SAML the following utility key providers has been implemented.
+- shareable-ec-key
+- shareable-rsa-key
+- shared-ec-key
+- shared-rsa-key
+
+The `sherable` keys are keys that can be distributed between realms.
+They have a configuration property to allow which realms can access them.
+
+The `shared` keys are references to `shareable` keys and have properties for what realm and name to load.
+Keys will only be loaded if allowed by the `shareable` instance.
