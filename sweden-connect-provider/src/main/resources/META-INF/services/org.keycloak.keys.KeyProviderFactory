@@ -14,8 +14,11 @@
 # limitations under the License.
 #
 #
-
+# Shareable
 se.swedenconnect.keycloak.key.ShareableRSAKeyProviderFactory
 se.swedenconnect.keycloak.key.ShareableEcKeyProviderFactory
+se.swedenconnect.keycloak.key.ShareableRSAEncKeyProviderFactory
+# Shared
 se.swedenconnect.keycloak.key.SharedRSAKeyProviderFactory
 se.swedenconnect.keycloak.key.SharedECKeyProviderFactory
+se.swedenconnect.keycloak.key.SharedRSAENCKeyProviderFactory
