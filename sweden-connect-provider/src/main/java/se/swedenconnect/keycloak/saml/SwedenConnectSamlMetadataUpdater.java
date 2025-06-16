@@ -148,26 +148,19 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
               .filter(idp -> idp.getConfig().containsKey("entityId"))
               .filter(idp -> idp.getConfig().get("entityId").equals(entityDescriptor.getEntityID()))
               .forEach(idp -> {
-                final Optional<IdentityProviderMapperModel> first = r.getIdentityProviderMappersStream()
-                    .filter(mapper -> mapper.getIdentityProviderAlias().equals(idp.getAlias()))
-                    .findFirst();
-                if (first.isPresent()) {
-                  final IdentityProviderMapperModel foundMapperModel = first.get();
-                  final int index = Integer.parseInt(idp.getConfig().get("attributeConsumingServiceIndex"));
-
-                  final IndexedEndpointType assertionConsumer = new IndexedEndpointType(
-                      URI.create("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
-                      URI.create("%srealms/%s/broker/%s/endpoint"
-                          .formatted(
-                              session.getContext().getUri().getBaseUri().toString(),
-                              r.getName(),
-                              idp.getAlias()
-                          )
-                      )
-                  );
-                  assertionConsumer.setIndex(index);
-                  assertionConsumers.add(assertionConsumer);
-                }
+                final int index = Integer.parseInt(idp.getConfig().get("attributeConsumingServiceIndex"));
+                final IndexedEndpointType assertionConsumer = new IndexedEndpointType(
+                    URI.create("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"),
+                    URI.create("%srealms/%s/broker/%s/endpoint"
+                        .formatted(
+                            session.getContext().getUri().getBaseUri().toString(),
+                            r.getName(),
+                            idp.getAlias()
+                        )
+                    )
+                );
+                assertionConsumer.setIndex(index);
+                assertionConsumers.add(assertionConsumer);
               });
         });
 
