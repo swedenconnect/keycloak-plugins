@@ -3,7 +3,7 @@
 # Keycloak Plugins
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
-![Version](https://img.shields.io/badge/Version-_0.4--SNAPSHOT-yellow)
+![Version](https://img.shields.io/badge/Version-_0.4.1--SNAPSHOT-yellow)
 
 Keycloak Plugins for use with Sweden Connect Federation
 
