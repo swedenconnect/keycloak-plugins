@@ -86,13 +86,6 @@ public class AttributeToClaim {
 
     attributeClaims.add(
         AttributeClaim.builder(
-            "urn:oid:1.2.752.201.3.4",
-            "prid"
-        ).build()
-    );
-
-    attributeClaims.add(
-        AttributeClaim.builder(
             "urn:oid:1.2.752.201.3.11",
             "https://id.oidc.se/claim/userSignature"
         ).build()
@@ -109,6 +102,34 @@ public class AttributeToClaim {
         AttributeClaim.builder(
             "urn:oid:1.2.752.201.3.13",
             "https://id.oidc.se/claim/authnEvidence"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.7",
+            "https://id.swedenconnect.se/claim/eidasPersonIdentifier"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.16",
+            "https://id.swedenconnect.se/claim/mappedPersonalIdentityNumber"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.4",
+            "https://id.swedenconnect.se/claim/prid"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.5",
+            "https://id.swedenconnect.se/claim/pridPersistence"
         ).build()
     );
 

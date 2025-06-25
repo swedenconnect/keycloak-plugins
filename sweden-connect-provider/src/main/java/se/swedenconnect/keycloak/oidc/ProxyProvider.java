@@ -36,7 +36,9 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
   private static final List<String> PROXIED_SCOPES = List.of(
       "https://id.oidc.se/scope/naturalPersonNumber",
       "https://id.oidc.se/scope/naturalPersonInfo",
-      "https://id.oidc.se/scope/naturalPersonOrgId"
+      "https://id.oidc.se/scope/naturalPersonOrgId",
+      "https://id.swedenconnect.se/scope/eidasNaturalPersonIdentity",
+      "https://id.swedenconnect.se/scope/eidasSwedishIdentity"
   );
 
   /**
