@@ -1,6 +1,6 @@
 VERSION=$(xmlstarlet sel -N x=http://maven.apache.org/POM/4.0.0 -t -v '/x:project/x:version' pom.xml)
 echo $VERSION
-REGEX="^([0-9]\.[0-9])(\.[0-9])*$"
+REGEX="^([0-9]\.[0-9]\.[0-9])*$"
 if [[ $VERSION =~ $REGEX ]]
   then
     SHORT_VERSION="${BASH_REMATCH[1]}"
