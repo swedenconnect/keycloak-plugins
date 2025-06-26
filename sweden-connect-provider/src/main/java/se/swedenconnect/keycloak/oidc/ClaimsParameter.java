@@ -154,7 +154,20 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
                   "https://id.oidc.se/claim/personalIdentityNumber", Map.of("essential", true),
                   "https://id.oidc.se/claim/coordinationNumber", Map.of("essential", true)
               )), null);
-
+      case "https://id.swedenconnect.se/scope/eidasNaturalPersonIdentity" -> new ClaimsParameter(
+          Map.of("userinfo", Map.of(
+                  "https://id.swedenconnect.se/claim/prid", Map.of("essential", true),
+                  "https://id.swedenconnect.se/claim/pridPersistence", Map.of("essential", true),
+                  "https://id.swedenconnect.se/claim/eidasPersonIdentifier", Map.of("essential", true)
+              ),
+              "id_token", Map.of(
+                  "https://id.swedenconnect.se/claim/prid", Map.of("essential", true),
+                  "https://id.swedenconnect.se/claim/pridPersistence", Map.of("essential", true)
+              )), null);
+      case "https://id.swedenconnect.se/scope/eidasSwedishIdentity" -> new ClaimsParameter(
+          Map.of("userinfo", Map.of(
+                  "https://id.swedenconnect.se/claim/mappedPersonalIdentityNumber", Map.of()
+              )), null);
       default -> null;
     };
   }

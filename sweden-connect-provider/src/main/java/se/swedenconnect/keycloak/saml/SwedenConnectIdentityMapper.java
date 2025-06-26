@@ -89,6 +89,7 @@ public class SwedenConnectIdentityMapper implements Module {
         List.of(
             "urn:oid:1.2.752.29.4.13",
             "urn:oid:1.2.752.201.3.4",
+            "urn:oid:1.2.752.201.3.7",
             "urn:oid:1.2.752.29.6.2.1"
         )
     );
