@@ -18,7 +18,6 @@ package se.swedenconnect.keycloak.oidc;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -60,7 +59,7 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
       final Map<String, Object> claims,
       final TokenType tokenType
   ) {
-    this.claims = claims;
+    this.claims = new HashMap<>(claims);
     this.tokenType = tokenType;
   }
 
@@ -91,34 +90,28 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
   }
 
   /**
-   * Merges this claims parameter with other
+   * Copy claims from other into this.
    *
    * @param other to merge with
    * @return this after resulting merge
    */
-  public ClaimsParameter merge(final ClaimsParameter other) {
-    if (Objects.nonNull(other)) {
-      final Map<String, Object> idToken = (Map<String, Object>) other.claims.get("id_token");
-      if (Objects.nonNull(idToken)) {
-        this.claims.put("id_token", new HashMap<String, Object>());
-        idToken.keySet()
-            .stream()
-            .filter(key -> Objects.nonNull(idToken.get(key)))
-            .forEach(key -> {
-          ((Map<String, Object>) this.claims.get("id_token")).put(key, idToken.get(key));
-        });
-      }
-      final Map<String, Object> userinfo = (Map<String, Object>) other.claims.get("userinfo");
-      this.claims.put("userinfo", new HashMap<String, Object>());
-      if (Objects.nonNull(userinfo)) {
-        userinfo.keySet()
-            .stream()
-            .filter(key -> Objects.nonNull(userinfo.get(key)))
-            .forEach(key -> {
-          ((Map<String, Object>) this.claims.get("userinfo")).put(key, userinfo.get(key));
-        });
-      }
-    }
+  public ClaimsParameter combine(final ClaimsParameter other) {
+    final HashMap<String, Object> idToken = new HashMap<>();
+    Optional.ofNullable(this.claims.get("id_token"))
+        .map(c -> ((Map<String , Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> idToken.put(entry.getKey(), entry.getValue())));
+    Optional.ofNullable(other.claims.get("id_token"))
+        .map(c -> ((Map<String , Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> idToken.put(entry.getKey(), entry.getValue())));
+    final HashMap<String, Object> userinfo = new HashMap<>();
+    Optional.ofNullable(this.claims.get("userinfo"))
+        .map(c -> ((Map<String , Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> userinfo.put(entry.getKey(), entry.getValue())));
+    Optional.ofNullable(other.claims.get("userinfo"))
+        .map(c -> ((Map<String , Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> userinfo.put(entry.getKey(), entry.getValue())));
+    this.claims.put("id_token", Map.copyOf(idToken));
+    this.claims.put("userinfo", Map.copyOf(userinfo));
     return this;
   }
 
