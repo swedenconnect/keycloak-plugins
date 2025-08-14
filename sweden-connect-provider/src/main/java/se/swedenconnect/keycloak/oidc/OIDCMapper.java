@@ -200,7 +200,7 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
           if (Objects.nonNull(scope)) {
             final ClaimsParameter other = ClaimsParameter.fromScope(scope);
             if (Objects.nonNull(other)) {
-              claims.merge(other);
+              claims.combine(other);
             }
           }
         });
