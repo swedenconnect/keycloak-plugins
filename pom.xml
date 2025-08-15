@@ -21,7 +21,7 @@
 
     <groupId>se.swedenconnect.keycloak</groupId>
     <artifactId>keycloak-plugins-parent</artifactId>
-    <version>0.4.2-SNAPSHOT</version>
+    <version>0.4.3</version>
     <packaging>pom</packaging>
 
     <url>http://maven.apache.org</url>
