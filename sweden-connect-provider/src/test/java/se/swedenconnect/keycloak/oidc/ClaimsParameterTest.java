@@ -19,7 +19,10 @@ package se.swedenconnect.keycloak.oidc;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 class ClaimsParameterTest {
 
@@ -42,5 +45,22 @@ class ClaimsParameterTest {
     Assertions.assertTrue(p1.getRequiredParameters().contains("https://id.oidc.se/claim/personalIdentityNumber"));
 
     Assertions.assertSame(p1, merged);
+  }
+
+  @Test
+  void splitAndCombineFromScopes() {
+    final HashMap<String, Object> stringObjectHashMap = new HashMap<>();
+    stringObjectHashMap.put("a", null);
+    final ClaimsParameter claims = new ClaimsParameter(Map.of("id_token", stringObjectHashMap), ClaimsParameter.TokenType.ID);
+    Arrays.stream("openid https://id.oidc.se/scope/naturalPersonNumber https://id.swedenconnect.se/claim/prid".split(
+        " "))
+        .forEach(scope -> {
+          if (Objects.nonNull(scope)) {
+            final ClaimsParameter other = ClaimsParameter.fromScope(scope);
+            if (Objects.nonNull(other)) {
+              claims.combine(other);
+            }
+          }
+        });
   }
 }
