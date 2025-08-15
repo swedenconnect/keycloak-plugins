@@ -18,6 +18,7 @@ package se.swedenconnect.keycloak.oidc;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -98,18 +99,35 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
   public ClaimsParameter combine(final ClaimsParameter other) {
     final HashMap<String, Object> idToken = new HashMap<>();
     Optional.ofNullable(this.claims.get("id_token"))
-        .map(c -> ((Map<String , Object>) c).entrySet())
-        .ifPresent(e -> e.forEach(entry -> idToken.put(entry.getKey(), entry.getValue())));
+        .map(c -> ((Map<String, Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> {
+          if (Objects.nonNull(entry.getKey()) && Objects.nonNull(entry.getValue())) {
+            idToken.put(entry.getKey(), entry.getValue());
+          }
+        }));
     Optional.ofNullable(other.claims.get("id_token"))
-        .map(c -> ((Map<String , Object>) c).entrySet())
-        .ifPresent(e -> e.forEach(entry -> idToken.put(entry.getKey(), entry.getValue())));
+        .map(c -> ((Map<String, Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> {
+          if (Objects.nonNull(entry.getKey()) && Objects.nonNull(entry.getValue())) {
+            idToken.put(entry.getKey(), entry.getValue());
+          }
+        }));
+
     final HashMap<String, Object> userinfo = new HashMap<>();
     Optional.ofNullable(this.claims.get("userinfo"))
-        .map(c -> ((Map<String , Object>) c).entrySet())
-        .ifPresent(e -> e.forEach(entry -> userinfo.put(entry.getKey(), entry.getValue())));
+        .map(c -> ((Map<String, Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> {
+          if (Objects.nonNull(entry.getKey()) && Objects.nonNull(entry.getValue())) {
+            userinfo.put(entry.getKey(), entry.getValue());
+          }
+        }));
     Optional.ofNullable(other.claims.get("userinfo"))
-        .map(c -> ((Map<String , Object>) c).entrySet())
-        .ifPresent(e -> e.forEach(entry -> userinfo.put(entry.getKey(), entry.getValue())));
+        .map(c -> ((Map<String, Object>) c).entrySet())
+        .ifPresent(e -> e.forEach(entry -> {
+          if (Objects.nonNull(entry.getKey()) && Objects.nonNull(entry.getValue())) {
+            userinfo.put(entry.getKey(), entry.getValue());
+          }
+        }));
     this.claims.put("id_token", Map.copyOf(idToken));
     this.claims.put("userinfo", Map.copyOf(userinfo));
     return this;
@@ -159,8 +177,8 @@ public class ClaimsParameter implements Predicate<AttributeClaim> {
               )), null);
       case "https://id.swedenconnect.se/scope/eidasSwedishIdentity" -> new ClaimsParameter(
           Map.of("userinfo", Map.of(
-                  "https://id.swedenconnect.se/claim/mappedPersonalIdentityNumber", Map.of()
-              )), null);
+              "https://id.swedenconnect.se/claim/mappedPersonalIdentityNumber", Map.of()
+          )), null);
       default -> null;
     };
   }
