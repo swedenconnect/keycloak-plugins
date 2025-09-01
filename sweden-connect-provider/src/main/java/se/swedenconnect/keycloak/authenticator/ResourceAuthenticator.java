@@ -25,11 +25,10 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.services.ErrorResponse;
+import se.swedenconnect.keycloak.oidc.ResourceMapper;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,6 +39,7 @@ import java.util.stream.Collectors;
  * @author Felix Hellman
  */
 public class ResourceAuthenticator implements Authenticator {
+  private static final Logger log = Logger.getLogger(ResourceMapper.class);
 
   @Override
   public void authenticate(final AuthenticationFlowContext context) {
@@ -49,7 +49,7 @@ public class ResourceAuthenticator implements Authenticator {
   private static Optional<ProtocolMapperModel> getModel(final AuthenticationFlowContext context) {
     return context.getAuthenticationSession()
         .getClient().getProtocolMappersStream()
-        .filter(mapper -> mapper.getName().equals("Resource Mapper"))
+        .filter(mapper -> mapper.getProtocolMapper().equals("resource-mapper"))
         .findFirst();
   }
 
@@ -63,6 +63,10 @@ public class ResourceAuthenticator implements Authenticator {
         context.getAuthenticationSession().getClientNotes().get("client_request_param_resource").split(",")
     ).toList();
 
+    if(resource.isEmpty()){
+      log.debugf("No resource parameter found in request");
+      return;
+    }
     getModel(context)
         .flatMap(model -> Optional.ofNullable(model.getConfig()
             .get("attribute.resource.resources"))
@@ -78,7 +82,8 @@ public class ResourceAuthenticator implements Authenticator {
                 "invalid_target"
                 );
           }
-          context.getAuthenticationSession().setClientNote("auth_resource_validated", String.join(",", resource));
+          context.getAuthenticationSession()
+                  .setClientNote("auth_resource_validated", String.join(",", resource));
           context.success();
         });
   }
