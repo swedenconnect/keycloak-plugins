@@ -22,10 +22,10 @@
     <parent>
         <artifactId>keycloak-plugins-parent</artifactId>
         <groupId>se.swedenconnect.keycloak</groupId>
-        <version>0.4.7-SNAPSHOT</version>
+        <version>0.4.5-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sweden-connect-provider</artifactId>
+    <artifactId>oidf</artifactId>
     <packaging>jar</packaging>
 
     <name>Sweden Connect Provider</name>
@@ -72,7 +72,7 @@
         <dependency>
             <groupId>se.swedenconnect.keycloak</groupId>
             <artifactId>tools</artifactId>
-            <version>0.4.7-SNAPSHOT</version>
+            <version>0.4.5-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
