@@ -26,6 +26,7 @@ import org.keycloak.dom.saml.v2.assertion.AttributeType;
 import org.keycloak.dom.saml.v2.assertion.AuthnContextType;
 import org.keycloak.dom.saml.v2.assertion.AuthnStatementType;
 import org.keycloak.models.IdentityProviderMapperModel;
+import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.provider.ProviderConfigProperty;
 
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public class SwedenConnectIdentityMapper implements Module {
    * Attribute key for username attribute.
    */
   public static final String ATTRIBUTE_USERNAME_KEY = "attribute.username.key";
+  public static final String ATTRIBUTE_ACR = "idp_acr";
 
   /**
    * Processes identity of completed authentication.
@@ -69,11 +71,16 @@ public class SwedenConnectIdentityMapper implements Module {
     this.setOtherUserProperties(context, assertion);
     this.setUserIdentity(mapperModel, context, assertion);
 
+    // ACR attribute handling.
     assertion.getStatements().forEach(statement -> {
       if (statement instanceof AuthnStatementType authn) {
         final AuthnContextType.AuthnContextTypeSequence sequence = authn.getAuthnContext().getSequence();
         final String value = sequence.getClassRef().getValue().toString();
-        context.setSessionNote("acr", value);
+          if (context.getIdp().getConfig().isTransientUsers()) {
+            context.setUserAttribute(ATTRIBUTE_ACR,value);
+          }
+        context.setSessionNote(ATTRIBUTE_ACR, value);
+
       }
     });
   }

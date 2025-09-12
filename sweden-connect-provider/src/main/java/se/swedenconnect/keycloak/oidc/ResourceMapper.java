@@ -55,17 +55,20 @@ public class ResourceMapper extends AbstractOIDCProtocolMapper implements OIDCAc
                                           final KeycloakSession session,
                                           final UserSessionModel userSession,
                                           final ClientSessionContext context) {
-    final List<String> aud = Arrays.stream(context.getClientSession()
-            .getNote("auth_resource_validated")
-            .split(","))
-        .toList();
+    final String validatedResourceParameters = context.getClientSession().getNote("auth_resource_validated");
+
+    if(validatedResourceParameters == null || validatedResourceParameters.isBlank()){
+      log.info("There is no validated auth_resource_parameters. Is the resource authenticator added to auth flow?");
+      return token;
+    }
+
+    final List<String> aud = Arrays.stream(validatedResourceParameters.split(",")).toList();
 
     //Scope to filter down
     final List<String> filteredScopes = this.getDownScoped(token, mapper, aud);
-    if (filteredScopes.size() > 1) {
-      //If allowed scopes is only openid, we do no filtering
-      token.setScope(String.join(" ", filteredScopes));
-    }
+
+    token.setScope(String.join(" ", filteredScopes));
+
 
 
 

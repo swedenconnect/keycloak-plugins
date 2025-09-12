@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  */
 public class ResourceAuthenticator implements Authenticator {
   private static final Logger log = Logger.getLogger(ResourceMapper.class);
-
+  private final static String VALIDATED_RESOURCE_ATT = "auth_resource_validated";
   @Override
   public void authenticate(final AuthenticationFlowContext context) {
     validate(context);
@@ -59,14 +59,20 @@ public class ResourceAuthenticator implements Authenticator {
   }
 
   private static void validate(final AuthenticationFlowContext context) {
-    final List<String> resource = Arrays.stream(
-        context.getAuthenticationSession().getClientNotes().get("client_request_param_resource").split(",")
-    ).toList();
+    final String clientRequestParamResource = context.getAuthenticationSession()
+            .getClientNotes().get("client_request_param_resource");
 
-    if(resource.isEmpty()){
+    if(clientRequestParamResource==null || clientRequestParamResource.isBlank()){
       log.debugf("No resource parameter found in request");
+      //context.getAuthenticationSession().removeClientNote(VALIDATED_RESOURCE_ATT);
+      //This is done to reset VALIDATED_RESOURCE_ATT
+      context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, "");
+      context.success();
       return;
     }
+
+    final List<String> resource = Arrays.stream(clientRequestParamResource.split(",")).toList();
+
     getModel(context)
         .flatMap(model -> Optional.ofNullable(model.getConfig()
             .get("attribute.resource.resources"))
@@ -82,8 +88,7 @@ public class ResourceAuthenticator implements Authenticator {
                 "invalid_target"
                 );
           }
-          context.getAuthenticationSession()
-                  .setClientNote("auth_resource_validated", String.join(",", resource));
+          context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, String.join(",", resource));
           context.success();
         });
   }
