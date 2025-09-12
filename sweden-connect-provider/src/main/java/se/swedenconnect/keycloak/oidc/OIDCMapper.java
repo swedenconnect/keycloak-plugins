@@ -41,6 +41,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import static se.swedenconnect.keycloak.saml.SwedenConnectIdentityMapper.ATTRIBUTE_ACR;
+
 
 /**
  * Mapper that implements mapping according to
@@ -94,10 +96,8 @@ public class OIDCMapper extends AbstractOIDCProtocolMapper
 
     idToken.setAuth_time((long) context.getClientSession().getStarted());
 
-    final String acr = userSessionModel.getNote("acr");
-    if (acr != null) {
-      idToken.setAcr(acr);
-    }
+    // Setting acr value, make sure the build in acr mapper is not in use. That one will write over the value.
+    userSessionModel.getUser().getAttributeStream(ATTRIBUTE_ACR).findFirst().ifPresent(idToken::setAcr);
 
     this.mapClaims(
         idToken,
