@@ -17,6 +17,9 @@
 package se.swedenconnect.keycloak.oidc;
 
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.jboss.logging.Logger;
 import org.keycloak.broker.oidc.mappers.UserAttributeMapper;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.models.IdentityProviderMapperModel;
@@ -24,11 +27,10 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.JsonWebToken;
+import se.swedenconnect.keycloak.saml.SwedenConnectIdentityMapper;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
 
 /**
  * UserAttributeMapper for OIDC.
@@ -40,6 +42,7 @@ import java.util.Optional;
  * @author Felix Hellman
  */
 public class SwedenConnectOIDCAttributeMapper extends UserAttributeMapper {
+  private static final Logger log = Logger.getLogger(SwedenConnectOIDCAttributeMapper.class);
 
   @Override
   public void preprocessFederatedIdentity(
@@ -52,6 +55,18 @@ public class SwedenConnectOIDCAttributeMapper extends UserAttributeMapper {
     final Map<String, Object> claims = new HashMap<>();
     final JsonWebToken validatedIdToken = (JsonWebToken) contextData.get("VALIDATED_ID_TOKEN");
     final JsonWebToken validatedAccessToken = (JsonWebToken) contextData.get("VALIDATED_ACCESS_TOKEN");
+    final ObjectNode validatedUserInfoToken = (ObjectNode) contextData.get("UserInfo");
+
+    if(validatedIdToken != null) {
+      final Iterator<Map.Entry<String, JsonNode>> fields = validatedUserInfoToken.fields();
+      while (fields.hasNext()) {
+        final Map.Entry<String, JsonNode> entry = fields.next();
+        claims.put(entry.getKey(), entry.getValue().asText());
+      }
+    } else {
+      log.info("There is no user_info data, make sure that user_info fetch is enabled");
+    }
+
     claims.putAll(validatedIdToken.getOtherClaims());
     claims.putAll(validatedAccessToken.getOtherClaims());
     if (context.getIdpConfig().isTransientUsers()) {
@@ -65,7 +80,7 @@ public class SwedenConnectOIDCAttributeMapper extends UserAttributeMapper {
   private void populateUserAttributes(
       final BrokeredIdentityContext context,
       final Map<String, Object> claims) {
-
+//
     AttributeToClaim.ATTRIBUTE_MAPPINGS.forEach(claim -> {
       Optional.ofNullable(claims.get(claim.getOidcClaimName()))
           .filter(v -> !List.of(

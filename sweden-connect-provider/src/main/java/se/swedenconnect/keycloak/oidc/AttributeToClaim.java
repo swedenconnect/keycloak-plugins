@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static se.swedenconnect.keycloak.saml.SwedenConnectIdentityMapper.ATTRIBUTE_ACR;
+
 /**
  * Collection of attribute mappings.
  *
@@ -130,6 +132,21 @@ public class AttributeToClaim {
         AttributeClaim.builder(
             "urn:oid:1.2.752.201.3.5",
             "https://id.swedenconnect.se/claim/pridPersistence"
+        ).build()
+    );
+
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+            "urn:oid:1.2.752.201.3.5",
+            "https://id.swedenconnect.se/claim/pridPersistence"
+        ).build()
+    );
+
+    attributeClaims.add(
+        AttributeClaim.builder(
+                ATTRIBUTE_ACR,
+                ATTRIBUTE_ACR
         ).build()
     );
 

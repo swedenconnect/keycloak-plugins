@@ -49,7 +49,7 @@ public class SwedenConnectIdentityMapper implements Module {
    * Attribute key for username attribute.
    */
   public static final String ATTRIBUTE_USERNAME_KEY = "attribute.username.key";
-  public static final String ATTRIBUTE_ACR = "idp_acr";
+  public static final String ATTRIBUTE_ACR = "acr";
 
   /**
    * Processes identity of completed authentication.
