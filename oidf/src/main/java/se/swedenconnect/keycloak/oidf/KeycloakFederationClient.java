@@ -36,10 +36,19 @@ import se.swedenconnect.oidf.common.entity.entity.integration.federation.TrustMa
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * Federation client for keycloak.
+ *
+ * @author Felix Hellman
+ */
 public class KeycloakFederationClient implements FederationClient {
   
   private final CloseableHttpClient client;
 
+  /**
+   * Constructor.
+   * @param session
+   */
   public KeycloakFederationClient(final KeycloakSession session) {
     this.client = session.getProvider(HttpClientProvider.class).getHttpClient();
   }

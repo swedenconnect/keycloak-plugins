@@ -34,11 +34,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Signer factory for keycloak.
+ *
+ * @author Felix Hellman
+ */
 public class KeycloakSignerFactory implements SignerFactory {
 
   private final RSAKey key;
   private final List<JWK> jwks = new ArrayList<>();
 
+  /**
+   * Constructor.
+   * @param session
+   */
   public KeycloakSignerFactory(final KeycloakSession session) {
     final KeyManager keyManager = new DefaultKeyManager(session);
     final KeyWrapper rs256 = keyManager.getActiveKey(session.getContext().getRealm(), KeyUse.SIG, "RS256");
@@ -83,6 +92,9 @@ public class KeycloakSignerFactory implements SignerFactory {
     return new JWKSet(this.key);
   }
 
+  /**
+   * @return keys to be used for metadata
+   */
   public JWKSet getMetadataKeys() {
     return new JWKSet(this.jwks);
   }
