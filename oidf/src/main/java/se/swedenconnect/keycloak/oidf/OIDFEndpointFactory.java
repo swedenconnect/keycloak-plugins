@@ -22,6 +22,11 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.services.resource.RealmResourceProviderFactory;
 
+/**
+ * Factory for OIDF endpoints.
+ *
+ * @author Felix Hellman
+ */
 public class OIDFEndpointFactory implements RealmResourceProviderFactory {
 
   private static final String PROVIDER_ID = "oidf";

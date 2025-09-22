@@ -32,10 +32,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Realm resource provider for OIDF endpoints.
+ *
+ * @author Felix Hellman
+ */
 public class OIDFResourceProvider implements RealmResourceProvider {
 
   private final KeycloakSession session;
 
+  /**
+   * Constructor.
+   *
+   * @param session
+   */
   public OIDFResourceProvider(final KeycloakSession session) {
     this.session = session;
   }
@@ -50,22 +60,25 @@ public class OIDFResourceProvider implements RealmResourceProvider {
 
   }
 
+  /**
+   * @return entity configuration
+   */
   @GET
   @Path(".well-known/openid-federation")
   public Response oidfResponse() {
     final String realmName = this.session.getContext().getRealm().getName();
 
-    final String issuer = session.getContext().getUri().getBaseUriBuilder()
+    final String issuer = this.session.getContext().getUri().getBaseUriBuilder()
         .path("/realms/{realm}")
         .buildFromMap(Map.of("realm", realmName))
         .toString();
 
-    final String tokenEndpoint = session.getContext().getUri().getBaseUriBuilder()
+    final String tokenEndpoint = this.session.getContext().getUri().getBaseUriBuilder()
         .path("/realms/{realm}/protocol/openid-connect/token")
         .buildFromMap(Map.of("realm", realmName))
         .toString();
 
-    final String authEndpoint = session.getContext().getUri().getBaseUriBuilder()
+    final String authEndpoint = this.session.getContext().getUri().getBaseUriBuilder()
         .path("/realms/{realm}/protocol/openid-connect/auth")
         .buildFromMap(Map.of("realm", realmName))
         .toString();
@@ -73,11 +86,19 @@ public class OIDFResourceProvider implements RealmResourceProvider {
     final KeycloakSignerFactory keycloakSignerFactory = new KeycloakSignerFactory(this.session);
     final KeycloakFederationClient federationClient = new KeycloakFederationClient(this.session);
 
-    final SigningEntityConfigurationFactory signingFactory = new SigningEntityConfigurationFactory(keycloakSignerFactory, federationClient, List.of());
+    final SigningEntityConfigurationFactory signingFactory = new SigningEntityConfigurationFactory(
+        keycloakSignerFactory,
+        federationClient,
+        List.of()
+    );
 
     final Map<String, Object> metadata = getMetadata(issuer, authEndpoint, tokenEndpoint, keycloakSignerFactory);
-    final EntityRecord entityRecord = new EntityRecord(new EntityID(issuer), new EntityID(issuer), null,
-        new JWKSet(keycloakSignerFactory.getSignKey()).toPublicJWKSet(), null, new HostedRecord(metadata, List.of(), List.of()),
+    final JWKSet signKey = new JWKSet(keycloakSignerFactory.getSignKey());
+    final EntityRecord entityRecord = new EntityRecord(
+        new EntityID(issuer),
+        new EntityID(issuer), null,
+        signKey.toPublicJWKSet(), null,
+        new HostedRecord(metadata, List.of(), List.of()),
         List.of(), List.of());
 
 
