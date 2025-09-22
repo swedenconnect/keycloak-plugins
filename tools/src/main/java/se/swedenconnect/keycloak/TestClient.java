@@ -177,7 +177,7 @@ public class TestClient implements HttpHandler {
         );
     final AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(
         new ResponseType("code"),
-        new Scope("openid"),
+        new Scope("openid","https://id.oidc.se/scope/naturalPersonInfo" , "https://id.oidc.se/scope/naturalPersonNumber"),
         clientID,
         callback)
         .endpointURI(new URI(this.clientConfiguration.getAuthEndpoint()))

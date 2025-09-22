@@ -65,6 +65,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>se.swedenconnect.opensaml</groupId>
+            <artifactId>opensaml-addons</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+        <dependency>
             <groupId>se.swedenconnect.keycloak</groupId>
             <artifactId>tools</artifactId>
             <version>0.4.7-SNAPSHOT</version>
