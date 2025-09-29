@@ -17,8 +17,8 @@
 package se.swedenconnect.keycloak.saml;
 
 import jakarta.enterprise.inject.spi.CDI;
+import org.jboss.logging.Logger;
 import org.keycloak.dom.saml.v2.mdui.LogoType;
-import org.keycloak.dom.saml.v2.mdui.UIInfoType;
 import org.keycloak.dom.saml.v2.metadata.ContactType;
 import org.keycloak.dom.saml.v2.metadata.ContactTypeType;
 import org.keycloak.dom.saml.v2.metadata.EndpointType;
@@ -35,6 +35,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.protocol.saml.mappers.SamlMetadataDescriptorUpdater;
 import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import se.swedenconnect.keycloak.oidc.AttributeToClaim;
@@ -53,9 +54,11 @@ import java.util.Set;
  * @author Felix Hellman
  */
 public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDescriptorUpdater {
-  /**
-   * Attribute key for entity categories.
-   */
+
+  private static final Logger log = Logger.getLogger(SwedenConnectSamlMetadataUpdater.class);
+
+  public static final String PROPERTY_PUBLISHING_PATH = "property.publishing.path";
+
   public static final String ATTRIBUTE_SAML_ENTITY_CATEGORIES = "attribute.entity.key";
 
   public static final String ATTRIBUTE_TECHNICAL_CONTACT_EMAIL = "attribute.contact.technical.email";
@@ -70,65 +73,78 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
 
   public static final String ATTRIBUTE_ORG_EN_URI = "attribute.org.en.uri";
 
+  public static final String ATTRIBUTE_UI_INFO_DISPLAYNAME = "attribute.ui.displayname";
+
   @Override
   public List<ProviderConfigProperty> getConfigProperties() {
-    final ProviderConfigProperty extensionsProperty = new ProviderConfigProperty();
-    extensionsProperty.setType(ProviderConfigProperty.MAP_TYPE);
-    extensionsProperty.setName(ATTRIBUTE_SAML_ENTITY_CATEGORIES);
-    extensionsProperty.setHelpText("SAML Entity Categories, key value is ignored");
-    extensionsProperty.setLabel("SAML Entity Categories");
 
-    final ProviderConfigProperty contactPersonProperty = new ProviderConfigProperty();
-    contactPersonProperty.setName(ATTRIBUTE_TECHNICAL_CONTACT_EMAIL);
-    contactPersonProperty.setRequired(true);
-    contactPersonProperty.setHelpText("Email of technical contact person");
-    contactPersonProperty.setLabel("Technical Contact Person");
-    contactPersonProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    final ProviderConfigurationBuilder builder = ProviderConfigurationBuilder.create();
 
-    final ProviderConfigProperty contactSupportPersonProperty = new ProviderConfigProperty();
-    contactSupportPersonProperty.setName(ATTRIBUTE_SUPPORT_CONTACT_EMAIL);
-    contactSupportPersonProperty.setRequired(true);
-    contactSupportPersonProperty.setHelpText("Email of support contact person");
-    contactSupportPersonProperty.setLabel("Support Contact Person");
-    contactSupportPersonProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    builder.property()
+        .name(ATTRIBUTE_SAML_ENTITY_CATEGORIES)
+        .helpText("SAML Entity Categories, key value is ignored")
+        .label("SAML Entity Categories")
+        .type(ProviderConfigProperty.MAP_TYPE)
+        .add();
 
-    final ProviderConfigProperty orgNameSvProperty = new ProviderConfigProperty();
-    orgNameSvProperty.setName(ATTRIBUTE_ORG_SV_NAME);
-    orgNameSvProperty.setRequired(true);
-    orgNameSvProperty.setHelpText("Organization Name (SV)");
-    orgNameSvProperty.setLabel("Organization Name (SV)");
-    orgNameSvProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    builder.property()
+        .name(ATTRIBUTE_UI_INFO_DISPLAYNAME)
+        .required(true)
+        .helpText("Display Name for the UIInfo extension. Add country code as key, e.g., \"sv\" - \"Exempelklienten\". "
+            + "Swedish is mandatory and English is recommended.")
+        .label("UI Info Display Name")
+        .type(ProviderConfigProperty.MAP_TYPE)
+        .add();
 
-    final ProviderConfigProperty orgURISvProperty = new ProviderConfigProperty();
-    orgURISvProperty.setName(ATTRIBUTE_ORG_SV_URI);
-    orgURISvProperty.setRequired(true);
-    orgURISvProperty.setHelpText("Organization URI (SV)");
-    orgURISvProperty.setLabel("Organization URI (SV)");
-    orgURISvProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    builder.property()
+        .name(ATTRIBUTE_TECHNICAL_CONTACT_EMAIL)
+        .required(true)
+        .helpText("Email of technical contact person")
+        .label("Technical Contact Person (email)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
 
-    final ProviderConfigProperty orgNameEnProperty = new ProviderConfigProperty();
-    orgNameEnProperty.setName(ATTRIBUTE_ORG_EN_NAME);
-    orgNameEnProperty.setRequired(false);
-    orgNameEnProperty.setHelpText("Organization Name (EN)");
-    orgNameEnProperty.setLabel("Organization Name (EN)");
-    orgNameEnProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    builder.property()
+        .name(ATTRIBUTE_SUPPORT_CONTACT_EMAIL)
+        .required(true)
+        .helpText("Email of support contact person")
+        .label("Support Contact Person (email)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
 
-    final ProviderConfigProperty orgURIEnProperty = new ProviderConfigProperty();
-    orgURIEnProperty.setName(ATTRIBUTE_ORG_EN_URI);
-    orgURIEnProperty.setRequired(false);
-    orgURIEnProperty.setHelpText("Organization URI (EN)");
-    orgURIEnProperty.setLabel("Organization URI (EN)");
-    orgURIEnProperty.setType(ProviderConfigProperty.STRING_TYPE);
+    builder.property()
+        .name(ATTRIBUTE_ORG_SV_NAME)
+        .required(true)
+        .helpText("Organization Name (SV)")
+        .label("Organization Name (SV)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
 
-    return List.of(
-        extensionsProperty,
-        contactPersonProperty,
-        contactSupportPersonProperty,
-        orgNameSvProperty,
-        orgURISvProperty,
-        orgNameEnProperty,
-        orgURIEnProperty
-    );
+    builder.property()
+        .name(ATTRIBUTE_ORG_SV_URI)
+        .required(true)
+        .helpText("Organization URI (SV)")
+        .label("Organization URI (SV)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
+
+    builder.property()
+        .name(ATTRIBUTE_ORG_EN_NAME)
+        .required(false)
+        .helpText("Organization Name (EN)")
+        .label("Organization Name (EN)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
+
+    builder.property()
+        .name(ATTRIBUTE_ORG_EN_URI)
+        .required(false)
+        .helpText("Organization URI (EN)")
+        .label("Organization URI (EN)")
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .add();
+
+    return builder.build();
   }
 
   @Override
@@ -223,7 +239,6 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
           }
         });
 
-
     entityDescriptor.getChoiceType().forEach(edtChoiceType -> {
       edtChoiceType.getDescriptors().forEach(edtDescriptorChoiceType -> {
         edtDescriptorChoiceType.getSpDescriptor()
@@ -243,14 +258,13 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
       });
     });
 
-
     final List<String> entityCategories = mapperModel
         .getConfigMap(ATTRIBUTE_SAML_ENTITY_CATEGORIES).values().stream()
         .map(List::getFirst)
         .toList();
 
     this.addEntityCategories(entityDescriptor, entityCategories);
-    this.addDisplayInfo(entityDescriptor);
+    this.addDisplayInfo(mapperModel, entityDescriptor);
   }
 
   private static LocalizedURIType createLocalizedUri(final String lang, final String uriValue) {
@@ -260,36 +274,82 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
   }
 
   private static LocalizedNameType createLocalizedName(final String lang, final String value) {
-    final LocalizedNameType english = new LocalizedNameType(lang);
-    english.setValue(value);
-    return english;
+    final LocalizedNameType ln = new LocalizedNameType(lang);
+    ln.setValue(value);
+    return ln;
   }
 
-  private void addDisplayInfo(final EntityDescriptorType entityDescriptor) {
+  private void addDisplayInfo(final IdentityProviderMapperModel mapperModel,
+      final EntityDescriptorType entityDescriptor) {
+
     //Following code is included and should work but is currently not being displayed as metadata
     //Hard coded values will be removed when UI info is present in metadata.
-    final ExtensionsType extension = new ExtensionsType();
 
-    entityDescriptor.getChoiceType()
+    final SPSSODescriptorType ssoDescriptor = entityDescriptor.getChoiceType()
         .getFirst().getDescriptors()
-        .getFirst().getSpDescriptor()
-        .setExtensions(extension);
+        .getFirst().getSpDescriptor();
 
-    final UIInfoType uiInfo = new UIInfoType();
-    extension.addExtension(uiInfo);
+    final ExtensionsType extension = Optional.ofNullable(ssoDescriptor.getExtensions())
+        .orElseGet(() -> {
+          final ExtensionsType e = new ExtensionsType();
+          ssoDescriptor.setExtensions(e);
+          return e;
+        });
 
+    //    final UIInfoType uiInfo = new UIInfoType();
+
+    final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    factory.setNamespaceAware(false);
+    final Document document;
+    try {
+      document = factory.newDocumentBuilder().newDocument();
+    }
+    catch (final ParserConfigurationException e) {
+      throw new IllegalStateException("Invalid configuration for document builder", e);
+    }
+
+    final Element element = document.createElementNS(
+        "urn:oasis:names:tc:SAML:metadata:ui",
+        "mdui:UIInfo");
+    element.setAttributeNS(
+        "http://www.w3.org/2000/xmlns/",
+        "xmlns:mdui",
+        "urn:oasis:names:tc:SAML:metadata:ui"
+    );
+
+    mapperModel.getConfigMap(ATTRIBUTE_UI_INFO_DISPLAYNAME).forEach((key, values) -> {
+      if (key == null || !key.matches("[a-zA-Z]{2}")) {
+        log.infov("Invalid UI display name - invalid language tag (%s)", key);
+        return;
+      }
+      if (values == null || values.isEmpty()) {
+        log.info("Invalid UI display name - no display name given");
+        return;
+      }
+      final Element child = document.createElementNS("", "mdui:DisplayName");
+      child.setAttribute("xml:lang", key.toLowerCase());
+      child.setTextContent(values.getFirst());
+      element.appendChild(child);
+      //uiInfo.addDisplayName(createLocalizedName(key.toLowerCase(), values.getFirst()));
+    });
+
+    extension.addExtension(element);
+/*
     final LogoType logo = new LogoType(256, 256);
 
     logo.setValue(URI.create(
         "https://swedenconnect.se/images/18.5b0eb5a018018072bd816a52/1646216790599/sweden-connect-logo-sv.svg"
     ));
     uiInfo.addLogo(logo);
-    final LocalizedNameType displayName = new LocalizedNameType("sv");
-    displayName.setValue("Keycloak Sweden Connect Plugin");
-    uiInfo.addDisplayName(displayName);
+    //    final LocalizedNameType displayName = new LocalizedNameType("sv");
+    //    displayName.setValue("Keycloak Sweden Connect Plugin");
+    //    uiInfo.addDisplayName(displayName);
     final LocalizedNameType description = new LocalizedNameType("sv");
     description.setValue("Keycloak Plugin for Sweden Connect");
     uiInfo.addDescription(description);
+
+    extension.addExtension(uiInfo);
+ */
   }
 
   private void addEntityCategories(
@@ -302,7 +362,8 @@ public class SwedenConnectSamlMetadataUpdater implements Module, SamlMetadataDes
     try {
       document = factory.newDocumentBuilder()
           .newDocument();
-    } catch (final ParserConfigurationException e) {
+    }
+    catch (final ParserConfigurationException e) {
       throw new IllegalStateException("Invalid configuration for document builder", e);
     }
 
