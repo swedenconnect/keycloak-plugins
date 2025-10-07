@@ -23,6 +23,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
 import org.keycloak.services.resource.RealmResourceProvider;
 import se.swedenconnect.oidf.common.entity.entity.SigningEntityConfigurationFactory;
 import se.swedenconnect.oidf.common.entity.entity.integration.registry.records.EntityRecord;
@@ -66,7 +67,13 @@ public class OIDFResourceProvider implements RealmResourceProvider {
   @GET
   @Path(".well-known/openid-federation")
   public Response oidfResponse() {
-    final String realmName = this.session.getContext().getRealm().getName();
+    final RealmModel realm = this.session.getContext().getRealm();
+
+    if (!realm.getAttribute("openid-federation", false)) {
+      return Response.status(404).build();
+    }
+
+    final String realmName = realm.getName();
 
     final String issuer = this.session.getContext().getUri().getBaseUriBuilder()
         .path("/realms/{realm}")
