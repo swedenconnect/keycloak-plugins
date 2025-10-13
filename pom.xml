@@ -30,6 +30,7 @@
         <module>sweden-connect-provider</module>
         <module>tools</module>
         <module>keycloak-login-customizer</module>
+        <module>pkcs11</module>
     </modules>
 
     <properties>
