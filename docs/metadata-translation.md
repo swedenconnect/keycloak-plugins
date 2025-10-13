@@ -18,8 +18,6 @@
     
     1.1.5. [Contact Persons](#contact-persons)
 
-    1.1.6. [Key Descriptors](#key-descriptors)
-
     1.2. [Identity Provider Metadata](#idp-metadata)
 
     1.2.1. [Assurance Certification](#assurance-certification)
@@ -177,90 +175,6 @@ Traverse over all `<md:ContactPerson>` elements and, and build a resulting JSON 
 If the resulting array is empty, do not add the `contacts` claims to the metadata.
 
 See [Section 1.2.5](#idp-contacts-mapping) for the IdP-to-OP mapping and [Section 1.3.4](#sp-contacts-mapping) for the SP-to-RP mapping.
-
-<a name="key-descriptors"></a>
-#### 1.1.6. Key Descriptors
-
-The `<md:KeyDescriptor>` elements under a `<md:IDPSSODescriptor>` or `<md:SPSSODescriptor> element MUST be translated into a JWK Set according to the rules specified below.
-
-A JWK Set MUST be created where each `<md:KeyDescriptor>` is translated into a JWK that is added to the set.
-
-For each `<md:KeyDescriptor>` in the metadata, the following steps MUST be made:
-
-- If the `use` attribute is set in the `<md:KeyDescriptor>`, the corresponding `use` parameter in the JWK MUST be set accordingly.
-
-    - If `use` is set to `unspecified`, the `use` parameter in the JWK MUST be omitted.
-    
-- Given the certificate, or key, found in the `<md:KeyDescriptor>`, the `kty` (key type) parameter in the JWK MUST be set to the type of the public key (`RSA` or `EC`).
-
-- The `kid` (key ID) of the JWK MUST be set. If `<md:KeyDescriptor>` contains a `<ds:KeyName>` element that is unique among all the key descriptors this value MUST be used for `kid`. If the value contains blanks, they are replaced with `-`. If no key name is set, a generated `kid` MUST be used.
-
-- The public key found in the `<md:KeyDescriptor>`, either directly, or via a `<ds:X509Certificate>` MUST be represented in the JWK. See examples below.
-
-- If the `<md:KeyDescriptor>` contains a `<ds:X509Certificate>` this value MAY be represented in the JWK using the `x5c` parameter. If `x5c` is supplied, the `x5t#S256` (certificate SHA-256 thumbprint) SHOULD also be included.
-
-- If the `use` attribute of the `<md:KeyDescriptor>` is set to `encryption` and the element contains a `<md:EncryptionMethod>` element pointing at an assymmetric encryption method, the corresponding `alg` parameter MUST be set in the JWK. See translation tables below:
-
-**RSA-OAEP (key transport)**
-
-| JOSE `alg` | JWK `kty` | XML `EncryptionMethod@Algorithm` | XML `ds:DigestMethod@Algorithm` | XML `xenc11:MGF@Algorithm` |
-| :--- | :--- | :--- | :--- | :--- |
-| `RSA-OAEP` | `RSA` | `http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p` | | (implicit MGF1+SHA-1)|
-| `RSA-OAEP` | `RSA` | `http://www.w3.org/2009/xmlenc11#rsa-oaep` | `http://www.w3.org/2000/09/xmldsig#sha1`| `http://www.w3.org/2009/xmlenc11#mgf1sha1` |
-| `RSA-OAEP-256` | `RSA` | `http://www.w3.org/2009/xmlenc11#rsa-oaep` | `http://www.w3.org/2001/04/xmlenc#sha256` | `http://www.w3.org/2009/xmlenc11#mgf1sha256` |
-| `RSA-OAEP-384` | `RSA` | `http://www.w3.org/2009/xmlenc11#rsa-oaep` | `http://www.w3.org/2001/04/xmldsig-more#sha384` | `http://www.w3.org/2009/xmlenc11#mgf1sha384` |
-| `RSA-OAEP-512` | `RSA` | `http://www.w3.org/2009/xmlenc11#rsa-oaep` | `http://www.w3.org/2001/04/xmlenc#sha512` | `http://www.w3.org/2009/xmlenc11#mgf1sha512`  |
-
-**ECDH-ES (EC key agreement)**
-
-| JOSE `alg` | JWK `kty` | XML `xenc:AgreementMethod@Algorithm` | Key derivation (XML) | XML key-wrap `EncryptionMethod@Algorithm` |
-| :--- | :--- | :--- | :--- | :--- |
-| `ECDH-ES` | `EC` | `http://www.w3.org/2009/xmlenc11#ECDH-ES` | `<xenc11:KeyDerivationMethod Algorithm="http://www.w3.org/2009/xmlenc11#ConcatKDF">` + `<ds:DigestMethod …sha256/>` | — |
-| `ECDH-ES+A128KW` | `EC` | `http://www.w3.org/2009/xmlenc11#ECDH-ES` | `...#ConcatKDF` with `<ds:DigestMethod Algorithm="...#sha256"/>` | `http://www.w3.org/2001/04/xmlenc#kw-aes128` |
-| `ECDH-ES+A192KW` | `EC` | `http://www.w3.org/2009/xmlenc11#ECDH-ES` | `...#ConcatKDF` with `<ds:DigestMethod Algorithm="...#sha256"/>` | `http://www.w3.org/2001/04/xmlenc#kw-aes192`  |
-| `ECDH-ES+A256KW` | `EC` | `http://www.w3.org/2009/xmlenc11#ECDH-ES` | `...#ConcatKDF` with `<ds:DigestMethod Algorithm="...#sha256"/>` | `http://www.w3.org/2001/04/xmlenc#kw-aes256`  |
-
-
-
-See further [RFC7517](https://www.rfc-editor.org/rfc/rfc7517.html).
-
-**Example JWKS containing one EC signing key and one RSA for encryption:**
-
-```json
-{
-  "keys": [
-    {
-      "kty": "EC",
-      "use": "sig",
-      "kid": "ec-sig-2025-09-30",
-      "alg": "ES256",
-      "crv": "P-256",
-      "x": "f83OJ3D2xF4GsW6Yp3-Wo6BZv4wLdd7M0k6xskJw0nw",
-      "y": "x_FEzRu9ePzFj5nS3pR1Tj6a0iR-7o4Z7TzVQJ7fY8w",
-      "x5c": [
-        "MIIBzTCCAXOgAwIBAgIUV0Q...base64-of-ec-cert...F9QwD..."
-      ],
-      "x5t#S256": "X5u3o4H5Vht2PZ4B6Hh9mBQpgrL5X3r0vPqUuW3kO6Q"
-    },
-    {
-      "kty": "RSA",
-      "use": "enc",
-      "kid": "rsa-enc-2025-09-30",
-      "alg": "RSA-OAEP-256",
-      "n": "sXch2wqD9f3a9uQwTxqZ2a8PpHwJ-4F8gFh7uZPpN3q9uQwTxqZ2a8PpHwJ-4F8gFh7uZPpN3q9uQwTxqZ2a8PpHwJ-4F8gFh7uZPpN3q",
-      "e": "AQAB",
-      "x5c": [
-        "MIIC5jCCAc6gAwIBAgIUK4E...base64-of-rsa-cert...fR5AgM..."
-      ],
-      "x5t#S256": "C7g2mIVsZ17o6-csh2tUdnm-V0Xf_7sZ0bdO6B7L3U0"
-    }
-  ]
-}
-```
-
-For an Identity Provider the generated JWKS MUST be indicated using the `jwks_uri` parameter. OpenID Federation-specific rules MAY also be added (i.e., using `jwks`).
-
-For a Service Provider the generated JWKS MUST be indicated using the `jwks_uri` or `jwks` parameter. OpenID Federation-specific rules MAY also be added.
 
 <a name="idp-metadata"></a>
 ### 1.2. Identity Provider Metadata
