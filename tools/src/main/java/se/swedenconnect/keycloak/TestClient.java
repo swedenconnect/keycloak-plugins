@@ -348,11 +348,15 @@ public class TestClient implements HttpHandler {
                       
             userInfo:
             %s
+            
+            accessToken-jwt:
+            %s
                       
             """.formatted(
             this.prettyPrint(SignedJWT.parse(accessToken.getValue()).getJWTClaimsSet().toString(false)),
             this.prettyPrint(idToken.getJWTClaimsSet().toString(false)),
-            this.prettyPrint(userInfoString)
+            this.prettyPrint(userInfoString),
+            accessToken.getValue()
         );
         exchange.sendResponseHeaders(200, payload.length());
         exchange.getResponseBody().write(payload.getBytes(StandardCharsets.UTF_8));
