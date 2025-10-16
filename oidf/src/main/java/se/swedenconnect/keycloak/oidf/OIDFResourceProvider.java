@@ -17,6 +17,7 @@
 package se.swedenconnect.keycloak.oidf;
 
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityID;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityStatement;
 import jakarta.ws.rs.GET;
@@ -94,7 +95,7 @@ public class OIDFResourceProvider implements RealmResourceProvider {
         .path("/realms/{realm}/protocol/openid-connect/userinfo")
         .buildFromMap(Map.of("realm", realmName))
         .toString();
-
+    JWKSet.parse(SignedJWT.parse("").getJWTClaimsSet().getJSONObjectClaim("jwks"))
     final KeycloakSignerFactory keycloakSignerFactory = new KeycloakSignerFactory(this.session);
     final KeycloakFederationClient federationClient = new KeycloakFederationClient(this.session);
 
@@ -147,7 +148,7 @@ public class OIDFResourceProvider implements RealmResourceProvider {
         "token_endpoint_auth_methos_supported", List.of("private_key_jwt"));
 
     final HashMap<String, Object> metadata = new HashMap<>(map);
-    metadata.put("token_endpoint_auth_signing_alg_values_supported", "RS256");
+    metadata.put("token_endpoint_auth_signing_alg_values_supported", List.of("RS256"));
     metadata.put("jwks", signingFactory.getMetadataKeys().toJSONObject());
 
     return Map.of("openid_provider", metadata);
