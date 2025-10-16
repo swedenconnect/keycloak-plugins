@@ -41,7 +41,7 @@
         <dependency>
             <groupId>se.swedenconnect.oidf</groupId>
             <artifactId>common</artifactId>
-            <version>0.6.1-SNAPSHOT</version>
+            <version>0.7.6</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
@@ -54,10 +54,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-saml-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.dasniko</groupId>
             <artifactId>testcontainers-keycloak</artifactId>
             <version>3.4.0</version>
@@ -68,11 +64,6 @@
             <artifactId>testcontainers</artifactId>
             <version>1.21.0</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>se.swedenconnect.keycloak</groupId>
-            <artifactId>tools</artifactId>
-            <version>0.4.7-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -39,11 +39,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>se.swedenconnect.oidf</groupId>
-            <artifactId>common</artifactId>
-            <version>0.6.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-model-jpa</artifactId>
             <scope>provided</scope>
