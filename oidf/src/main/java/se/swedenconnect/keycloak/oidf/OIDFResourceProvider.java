@@ -90,6 +90,11 @@ public class OIDFResourceProvider implements RealmResourceProvider {
         .buildFromMap(Map.of("realm", realmName))
         .toString();
 
+    final String userInfoEndpoint = this.session.getContext().getUri().getBaseUriBuilder()
+        .path("/realms/{realm}/protocol/openid-connect/userinfo")
+        .buildFromMap(Map.of("realm", realmName))
+        .toString();
+
     final KeycloakSignerFactory keycloakSignerFactory = new KeycloakSignerFactory(this.session);
     final KeycloakFederationClient federationClient = new KeycloakFederationClient(this.session);
 
@@ -99,7 +104,12 @@ public class OIDFResourceProvider implements RealmResourceProvider {
         List.of()
     );
 
-    final Map<String, Object> metadata = getMetadata(issuer, authEndpoint, tokenEndpoint, keycloakSignerFactory);
+    final Map<String, Object> metadata = createMetadata(issuer,
+        authEndpoint,
+        tokenEndpoint,
+        userInfoEndpoint,
+        keycloakSignerFactory
+    );
     final JWKSet signKey = new JWKSet(keycloakSignerFactory.getSignKey());
     final EntityRecord entityRecord = new EntityRecord(
         new EntityID(issuer),
@@ -114,15 +124,17 @@ public class OIDFResourceProvider implements RealmResourceProvider {
     return Response.ok(response).build();
   }
 
-  private static Map<String, Object> getMetadata(
+  private static Map<String, Object> createMetadata(
       final String issuer,
       final String authorizationEndpoint,
       final String tokenEndpoint,
+      final String userInfoEndpoint,
       final KeycloakSignerFactory signingFactory
   ) {
     final Map<String, Object> map = Map.of(
         "issuer", issuer,
         "authorization_endpoint", authorizationEndpoint,
+        "userinfo_endpoint", userInfoEndpoint,
         "token_endpoint", tokenEndpoint,
         "client_registration_types_supported", List.of("explicit"),
         "grant_types_supported", List.of(
