@@ -28,7 +28,6 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.services.resource.RealmResourceProvider;
 import se.swedenconnect.oidf.common.entity.entity.SigningEntityConfigurationFactory;
 import se.swedenconnect.oidf.common.entity.entity.integration.registry.records.EntityRecord;
-import se.swedenconnect.oidf.common.entity.entity.integration.registry.records.HostedRecord;
 
 import java.util.HashMap;
 import java.util.List;
@@ -95,12 +94,10 @@ public class OIDFResourceProvider implements RealmResourceProvider {
         .path("/realms/{realm}/protocol/openid-connect/userinfo")
         .buildFromMap(Map.of("realm", realmName))
         .toString();
-    JWKSet.parse(SignedJWT.parse("").getJWTClaimsSet().getJSONObjectClaim("jwks"))
     final KeycloakSignerFactory keycloakSignerFactory = new KeycloakSignerFactory(this.session);
     final KeycloakFederationClient federationClient = new KeycloakFederationClient(this.session);
 
     final SigningEntityConfigurationFactory signingFactory = new SigningEntityConfigurationFactory(
-        keycloakSignerFactory,
         federationClient,
         List.of()
     );
@@ -114,10 +111,12 @@ public class OIDFResourceProvider implements RealmResourceProvider {
     final JWKSet signKey = new JWKSet(keycloakSignerFactory.getSignKey());
     final EntityRecord entityRecord = new EntityRecord(
         new EntityID(issuer),
-        new EntityID(issuer), null,
-        signKey.toPublicJWKSet(), null,
-        new HostedRecord(metadata, List.of(), List.of()),
-        List.of(), List.of());
+        metadata,
+        List.of(),
+        null,
+        List.of(),
+        signKey,
+        List.of());
 
 
     final EntityStatement entityConfiguration = signingFactory.createEntityConfiguration(entityRecord);

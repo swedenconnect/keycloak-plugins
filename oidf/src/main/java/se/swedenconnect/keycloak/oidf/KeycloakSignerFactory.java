@@ -24,6 +24,7 @@ import org.keycloak.crypto.KeyWrapper;
 import org.keycloak.keys.DefaultKeyManager;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
+import se.swedenconnect.oidf.common.entity.entity.integration.registry.records.EntityRecord;
 import se.swedenconnect.oidf.common.entity.jwt.FederationSigner;
 import se.swedenconnect.oidf.common.entity.jwt.JWKFederationSigner;
 import se.swedenconnect.oidf.common.entity.jwt.SignerFactory;
@@ -66,6 +67,11 @@ public class KeycloakSignerFactory implements SignerFactory {
         .forEach(this.jwks::add);
   }
 
+  @Override
+  public FederationSigner createSigner(final EntityRecord entityRecord) {
+    return new JWKFederationSigner(this.key);
+  }
+
   private static RSAKey buildKey(final KeyWrapper rs256) {
     try {
       return new RSAKey.Builder((RSAPublicKey) rs256.getPublicKey())
@@ -77,19 +83,11 @@ public class KeycloakSignerFactory implements SignerFactory {
     }
   }
 
-  @Override
-  public FederationSigner createSigner() {
-    return new JWKFederationSigner(this.key);
-  }
-
-  @Override
+  /**
+   * @return key used for signature
+   */
   public JWK getSignKey() {
     return this.key;
-  }
-
-  @Override
-  public JWKSet getSignKeys() {
-    return new JWKSet(this.key);
   }
 
   /**
@@ -98,4 +96,5 @@ public class KeycloakSignerFactory implements SignerFactory {
   public JWKSet getMetadataKeys() {
     return new JWKSet(this.jwks);
   }
+
 }

@@ -21,7 +21,7 @@
 
     <groupId>se.swedenconnect.keycloak</groupId>
     <artifactId>keycloak-plugins-parent</artifactId>
-    <version>0.4.7-SNAPSHOT</version>
+    <version>0.4.8-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <url>http://maven.apache.org</url>
@@ -38,7 +38,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <keycloak.version>26.4.0</keycloak.version>
+        <keycloak.version>26.5.0</keycloak.version>
     </properties>
 
     <dependencyManagement>
