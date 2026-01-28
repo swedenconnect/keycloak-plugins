@@ -21,7 +21,7 @@
 
     <groupId>se.swedenconnect.keycloak</groupId>
     <artifactId>keycloak-plugins-parent</artifactId>
-    <version>0.4.7-SNAPSHOT</version>
+    <version>0.4.8-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <url>http://maven.apache.org</url>
@@ -31,13 +31,14 @@
         <module>tools</module>
         <module>keycloak-login-customizer</module>
         <module>pkcs11</module>
+        <module>oidf</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <keycloak.version>26.2.5</keycloak.version>
+        <keycloak.version>26.5.0</keycloak.version>
     </properties>
 
     <dependencyManagement>
@@ -48,6 +49,12 @@
                 <version>${keycloak.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.keycloak.bom</groupId>
+                <artifactId>keycloak-spi-bom</artifactId>
+                <version>${keycloak.version}</version>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.junit</groupId>
@@ -156,6 +163,15 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
             </plugin>
         </plugins>
     </build>
