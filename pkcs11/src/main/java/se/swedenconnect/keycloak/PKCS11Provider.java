@@ -29,6 +29,7 @@ import se.swedenconnect.security.credential.nimbus.JwkTransformerFunction;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -72,26 +73,15 @@ public class PKCS11Provider implements KeyProvider {
     final KeyWrapper t = new KeyWrapper();
     t.setType(apply.getKeyType().getValue());
     t.setKid(apply.getKeyID());
-    t.setAlgorithm(this.getAlgorithm(credential.getPublicKey().getAlgorithm()));
+    Optional.ofNullable(apply.toECKey()).ifPresent(ecKey -> {
+      t.setCurve(ecKey.getCurve().getName());
+    });
+    t.setAlgorithm(t.getAlgorithmOrDefault());
     t.setPublicKey(credential.getPublicKey());
     t.setCertificateChain(List.of(credential.getCertificate()));
     t.setUse(KeyUse.SIG);
     t.setStatus(KeyStatus.ACTIVE);
     t.setProviderId(this.model.getId());
-    log.info("HSM Provider returned 1 keys");
     return Stream.of(t);
-  }
-
-  /**
-   * Get JWK algo from java algo
-   * @param algo from public key
-   * @return jwk alg
-   */
-  public String getAlgorithm(final String algo) {
-    return switch (algo.toLowerCase()) {
-      case "rsa" -> "RS256";
-      default -> throw new IllegalArgumentException("Could not determine algo type");
-    };
-
   }
 }

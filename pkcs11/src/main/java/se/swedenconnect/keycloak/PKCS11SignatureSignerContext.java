@@ -22,6 +22,7 @@ import org.keycloak.crypto.SignatureException;
 import org.keycloak.crypto.SignatureSignerContext;
 import se.swedenconnect.security.credential.PkiCredential;
 
+import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 
 /**
@@ -62,13 +63,23 @@ public class PKCS11SignatureSignerContext implements SignatureSignerContext {
   @Override
   public byte[] sign(final byte[] data) throws SignatureException {
     try {
-      //TODO calculate algorithm
-      final Signature signature = Signature.getInstance("SHA256withRSA");
+      final Signature signature = this.getSignatureInstance();
       signature.initSign(this.credential.getPrivateKey());
       signature.update(data);
       return signature.sign();
     } catch (final Exception e) {
       throw new RuntimeException("Failed to load key or sign", e);
     }
+  }
+
+  private Signature getSignatureInstance() throws NoSuchAlgorithmException {
+    if (this.wrapper.getType().equals("EC")) {
+      return Signature.getInstance("SHA256withECDSA");
+    }
+    if (this.wrapper.getType().equals("RSA")) {
+      return Signature.getInstance("SHA256withRSA");
+    }
+    throw new IllegalArgumentException("Failed to determine signature algorithm to use for type:%s"
+        .formatted(this.wrapper.getType()));
   }
 }
