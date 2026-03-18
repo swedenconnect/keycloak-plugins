@@ -92,13 +92,18 @@ public class PKCS11SignatureProviderFactory implements SignatureProviderFactory 
     final String alias = config.getFirst(PKCS11ProviderFactory.PKCS_ALIAS_CONFIG_KEY);
     final String pin = config.getFirst(PKCS11ProviderFactory.PKCS_PIN_CONFIG_KEY);
 
-    return new Pkcs11Credential(
-        configuration,
-        alias,
-        pin.toCharArray(),
-        new SunPkcs11PrivateKeyAccessor(),
-        new SunPkcs11CertificatesAccessor()
-    );
+    try {
+      return new Pkcs11Credential(
+          configuration,
+          alias,
+          pin.toCharArray(),
+          new SunPkcs11PrivateKeyAccessor(),
+          new SunPkcs11CertificatesAccessor()
+      );
+    } catch (final Exception e) {
+      log.errorf(e, "Failed to load PKCS#11 key with alias '%s'", alias);
+      return null;
+    }
   }
 
   /**
