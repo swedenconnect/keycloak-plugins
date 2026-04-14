@@ -68,7 +68,8 @@ public class PKCS11SignatureProviderFactory implements SignatureProviderFactory 
           config.getFirst(PKCS11ProviderFactory.HSMSLOT_NAME_CONFIG_KEY),
           config.getFirst(PKCS11ProviderFactory.HSMSLOT_ID_CONFIG_KEY),
           Optional.ofNullable(config.getFirst(PKCS11ProviderFactory.HSMSLOT_INDEX_CONFIG_KEY))
-              .map(Integer::parseInt).orElse(0),
+              .filter(s -> !s.isBlank())
+              .map(Integer::parseInt).orElse(null),
           config.getFirst(PKCS11ProviderFactory.PKCS_BASE_PROVIDER_NAME_CONFIG_KEY)
       );
     } catch (final Exception e) {

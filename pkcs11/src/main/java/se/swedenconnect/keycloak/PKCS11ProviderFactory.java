@@ -75,8 +75,8 @@ public class PKCS11ProviderFactory implements KeyProviderFactory<PKCS11Provider>
             HSMSLOT_INDEX_CONFIG_KEY,
             "HSM Slot Index",
             "Index of HSM slot, may be null",
-            ProviderConfigProperty.INTEGER_TYPE,
-            0),
+            ProviderConfigProperty.STRING_TYPE,
+            ""),
         new ProviderConfigProperty(
             PKCS_BASE_PROVIDER_NAME_CONFIG_KEY,
             "Base Provider Name",
