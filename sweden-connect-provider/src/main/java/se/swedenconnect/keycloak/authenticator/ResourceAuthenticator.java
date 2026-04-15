@@ -34,23 +34,33 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Authenticator class for validating resource parameter in auth request.
+ * Authenticator that validates the RFC 8707 {@code resource} parameter at the authorization
+ * endpoint and stores the result in the authentication-session note {@code auth_resource_validated}.
+ *
+ * <p>When no {@code resource} parameter is present in the request the authenticator succeeds
+ * unconditionally and clears any previously stored validated-resource note.
+ *
+ * <p>When a {@code resource} parameter is present the authenticator resolves the set of
+ * permitted resources from the client's {@code resource-mapper} protocol-mapper configuration.
+ * If no mapper is configured, or the mapper carries no resource list, the request is rejected
+ * with {@code invalid_target}. The same error is returned when any of the requested resource
+ * URIs is not in the permitted set.
  *
  * @author Felix Hellman
  */
 public class ResourceAuthenticator implements Authenticator {
+
   private static final Logger log = Logger.getLogger(ResourceMapper.class);
-  private final static String VALIDATED_RESOURCE_ATT = "auth_resource_validated";
+
+  /** Client-session note that carries the resource validated by this authenticator. */
+  private static final String VALIDATED_RESOURCE_ATT = "auth_resource_validated";
+
+  /** RFC 8707 §7 error code. */
+  private static final String INVALID_TARGET = "invalid_target";
+
   @Override
   public void authenticate(final AuthenticationFlowContext context) {
     validate(context);
-  }
-
-  private static Optional<ProtocolMapperModel> getModel(final AuthenticationFlowContext context) {
-    return context.getAuthenticationSession()
-        .getClient().getProtocolMappersStream()
-        .filter(mapper -> mapper.getProtocolMapper().equals("resource-mapper"))
-        .findFirst();
   }
 
   @Override
@@ -58,39 +68,63 @@ public class ResourceAuthenticator implements Authenticator {
     validate(context);
   }
 
+  /**
+   * Validates the {@code resource} parameter from the authorization request.
+   *
+   * @param context the authentication-flow context
+   */
   private static void validate(final AuthenticationFlowContext context) {
     final String clientRequestParamResource = context.getAuthenticationSession()
-            .getClientNotes().get("client_request_param_resource");
+        .getClientNotes().get("client_request_param_resource");
 
-    if(clientRequestParamResource==null || clientRequestParamResource.isBlank()){
-      log.debugf("No resource parameter found in request");
-      //context.getAuthenticationSession().removeClientNote(VALIDATED_RESOURCE_ATT);
-      //This is done to reset VALIDATED_RESOURCE_ATT
+    if (clientRequestParamResource == null || clientRequestParamResource.isBlank()) {
+      log.debugf("No resource parameter found in authorization request");
       context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, "");
       context.success();
       return;
     }
 
-    final List<String> resource = Arrays.stream(clientRequestParamResource.split(",")).toList();
+    final List<String> requestedResources = Arrays.stream(clientRequestParamResource.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .toList();
 
-    getModel(context)
-        .flatMap(model -> Optional.ofNullable(model.getConfig()
-            .get("attribute.resource.resources"))
-        ).ifPresent(csv -> {
-          final Set<String> allowedResources = Arrays.stream(
-              csv.split(",")).collect(Collectors.toSet()
-          );
+    final Optional<String> resourcesConfig = getModel(context)
+        .flatMap(model -> Optional.ofNullable(model.getConfig().get("attribute.resource.resources")));
 
-          if (!allowedResources.containsAll(resource)) {
-            throw new AuthenticationFlowException(
-                AuthenticationFlowError.GENERIC_AUTHENTICATION_ERROR,
-                "Client resource request prohibited",
-                "invalid_target"
-                );
-          }
-          context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, String.join(",", resource));
-          context.success();
-        });
+    if (resourcesConfig.isEmpty()) {
+      throw new AuthenticationFlowException(
+          AuthenticationFlowError.GENERIC_AUTHENTICATION_ERROR,
+          "Client requested a resource indicator but no resource-mapper is configured",
+          INVALID_TARGET);
+    }
+
+    final Set<String> allowedResources = Arrays.stream(resourcesConfig.get().split(","))
+        .map(String::trim)
+        .collect(Collectors.toSet());
+
+    if (!allowedResources.containsAll(requestedResources)) {
+      throw new AuthenticationFlowException(
+          AuthenticationFlowError.GENERIC_AUTHENTICATION_ERROR,
+          "Client resource request prohibited by policy",
+          INVALID_TARGET);
+    }
+
+    context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, String.join(",", requestedResources));
+    context.success();
+  }
+
+  /**
+   * Finds the first {@code resource-mapper} protocol mapper configured on the client.
+   *
+   * @param context the authentication-flow context
+   * @return the mapper model, or empty if none is configured
+   */
+  private static Optional<ProtocolMapperModel> getModel(final AuthenticationFlowContext context) {
+    return context.getAuthenticationSession()
+        .getClient().getProtocolMappersStream()
+        .filter(mapper -> mapper.getProtocolMapper().equals("resource-mapper"))
+        .findFirst();
   }
 
   @Override
@@ -110,11 +144,9 @@ public class ResourceAuthenticator implements Authenticator {
 
   @Override
   public void setRequiredActions(final KeycloakSession session, final RealmModel realm, final UserModel user) {
-
   }
 
   @Override
   public void close() {
-
   }
 }
