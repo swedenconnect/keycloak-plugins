@@ -18,14 +18,13 @@ package se.swedenconnect.keycloak.servlet;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.UriInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 
 class Rfc8707ContainerRequestFilterTest {
 
@@ -84,45 +83,57 @@ class Rfc8707ContainerRequestFilterTest {
     Assertions.assertNull(Rfc8707ContainerRequestFilter.normalizeFormBody(null));
   }
 
-  // --- filter() integration tests ---
+  // --- GET filter() integration tests ---
 
   @Test
-  void filterReplacesEntityStreamForFormPost() throws Exception {
-    final String body = "grant_type=refresh_token&resource=https%3A%2F%2Fapi1.example.com&resource=https%3A%2F%2Fapi2.example.com";
+  void filterNormalizesQueryStringForGet() throws Exception {
+    final URI original = URI.create("https://kc.example.com/realms/test/protocol/openid-connect/auth"
+        + "?response_type=code&client_id=my-client"
+        + "&resource=https%3A%2F%2Fapi1.example.com&resource=https%3A%2F%2Fapi2.example.com"
+        + "&scope=openid+read");
 
-    final ContainerRequestContext ctx = Mockito.mock(ContainerRequestContext.class);
-    Mockito.when(ctx.getMethod()).thenReturn("POST");
-    Mockito.when(ctx.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
-    Mockito.when(ctx.getEntityStream())
-        .thenReturn(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+    final UriInfo uriInfo = Mockito.mock(UriInfo.class);
+    Mockito.when(uriInfo.getRequestUri()).thenReturn(original);
 
-    final ArgumentCaptor<InputStream> captor = ArgumentCaptor.forClass(InputStream.class);
-    new Rfc8707ContainerRequestFilter().filter(ctx);
-
-    Mockito.verify(ctx).setEntityStream(captor.capture());
-    final String result = new String(captor.getValue().readAllBytes(), StandardCharsets.UTF_8);
-    Assertions.assertEquals(1, countOccurrences(result, "resource="),
-        "normalized body must have single resource= entry");
-  }
-
-  @Test
-  void filterSkipsGetRequests() throws Exception {
     final ContainerRequestContext ctx = Mockito.mock(ContainerRequestContext.class);
     Mockito.when(ctx.getMethod()).thenReturn("GET");
+    Mockito.when(ctx.getUriInfo()).thenReturn(uriInfo);
 
+    final ArgumentCaptor<URI> captor = ArgumentCaptor.forClass(URI.class);
     new Rfc8707ContainerRequestFilter().filter(ctx);
 
-    Mockito.verify(ctx, Mockito.never()).setEntityStream(Mockito.any());
+    Mockito.verify(ctx).setRequestUri(captor.capture());
+    final String query = captor.getValue().getRawQuery();
+    Assertions.assertEquals(1, countOccurrences(query, "resource="),
+        "normalized query must have single resource= entry");
+    Assertions.assertTrue(query.contains("response_type=code"), "other params preserved");
   }
 
   @Test
-  void filterSkipsNonFormContentType() throws Exception {
+  void filterSkipsGetWithSingleResource() throws Exception {
+    final URI original = URI.create("https://kc.example.com/auth?response_type=code&resource=https%3A%2F%2Fapi.example.com");
+
+    final UriInfo uriInfo = Mockito.mock(UriInfo.class);
+    Mockito.when(uriInfo.getRequestUri()).thenReturn(original);
+
     final ContainerRequestContext ctx = Mockito.mock(ContainerRequestContext.class);
-    Mockito.when(ctx.getMethod()).thenReturn("POST");
-    Mockito.when(ctx.getMediaType()).thenReturn(MediaType.APPLICATION_JSON_TYPE);
+    Mockito.when(ctx.getMethod()).thenReturn("GET");
+    Mockito.when(ctx.getUriInfo()).thenReturn(uriInfo);
 
     new Rfc8707ContainerRequestFilter().filter(ctx);
 
+    // single resource — URI unchanged, setRequestUri never called
+    Mockito.verify(ctx, Mockito.never()).setRequestUri(Mockito.any());
+  }
+
+  @Test
+  void filterSkipsPostRequests() throws Exception {
+    final ContainerRequestContext ctx = Mockito.mock(ContainerRequestContext.class);
+    Mockito.when(ctx.getMethod()).thenReturn("POST");
+
+    new Rfc8707ContainerRequestFilter().filter(ctx);
+
+    Mockito.verify(ctx, Mockito.never()).setRequestUri(Mockito.any());
     Mockito.verify(ctx, Mockito.never()).setEntityStream(Mockito.any());
   }
 

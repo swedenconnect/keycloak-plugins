@@ -138,8 +138,8 @@ public class ResourceMapper extends AbstractOIDCProtocolMapper implements OIDCAc
     final Map<String, String> mapping = this.getConfiguration(mapper, "attribute.resource.scope.mapping");
 
     // Intersect allowed scopes across all audiences: a scope survives only if every
-    // requested audience permits it. Using union (the previous approach) allowed write
-    // to leak into tokens where one audience restricted it to read-only.
+    // requested audience permits it. Using union allows write to leak into tokens
+    // where one audience restricted it to read-only.
     final Set<String> allowed = new HashSet<>(scopes);
     for (final String audience : aud) {
       final String scopeConfig = mapping.get(audience);
@@ -149,12 +149,13 @@ public class ResourceMapper extends AbstractOIDCProtocolMapper implements OIDCAc
         allowed.retainAll(audienceAllowed);
       }
     }
-    allowed.add("openid"); // openid always survives
+    allowed.add("openid");
 
-    return scopes.stream()
+    final List<String> result = scopes.stream()
         .filter(allowed::contains)
         .distinct()
         .toList();
+    return result;
   }
 
   @Override

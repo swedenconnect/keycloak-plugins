@@ -56,12 +56,10 @@ public class IdpSelectorAuthenticator extends IdentityProviderAuthenticator {
     final Optional<String> redirected = this.getFilterMapperScope(context)
         .flatMap(model -> {
           final Map<String, String> config = model.getConfig();
-          log.infof("Default provider config %s", config);
           return Optional.ofNullable(config.get(IdpFilterMapper.DEFAULT_IDENTITY_PROVIDER));
         });
     redirected
         .ifPresent(providerAlias -> {
-          log.infof("Sending redirect to %s", providerAlias);
           this.redirect(context, providerAlias);
         });
     return redirected.isPresent();

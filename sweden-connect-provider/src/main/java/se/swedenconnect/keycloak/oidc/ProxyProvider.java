@@ -16,15 +16,27 @@
  */
 package se.swedenconnect.keycloak.oidc;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
+import org.keycloak.OAuth2Constants;
+import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.KeycloakOIDCIdentityProvider;
 import org.keycloak.broker.oidc.OIDCIdentityProviderConfig;
 import org.keycloak.broker.provider.AuthenticationRequest;
+import org.keycloak.broker.provider.IdentityProvider;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Docs
@@ -41,6 +53,21 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
       "https://id.swedenconnect.se/scope/eidasSwedishIdentity"
   );
 
+  private static final String REDIRECT_HTML = """
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="refresh" content="0;url=%s">
+        <title>Redirecting...</title>
+      </head>
+      <body>
+        <p>You are being redirected to <a href="%s">example.com</a>.
+        If you are not redirected automatically, click the link.</p>
+      </body>
+      </html>
+      """;
+
   /**
    * Constructor.
    *
@@ -51,6 +78,12 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
       final KeycloakSession session,
       final OIDCIdentityProviderConfig config) {
     super(session, config);
+  }
+
+  @Override
+  public Object callback(final RealmModel realm, final IdentityProvider.AuthenticationCallback callback,
+      final EventBuilder event) {
+    return new ProxyEndpoint(callback, realm, event, this);
   }
 
   @Override
@@ -73,5 +106,53 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
       return authorizationUrl.replaceQueryParam("scope", String.join(" ", requestedScopes));
     }
     return authorizationUrl;
+  }
+
+  protected static class ProxyEndpoint extends KeycloakOIDCIdentityProvider.KeycloakEndpoint {
+
+    public ProxyEndpoint(final IdentityProvider.AuthenticationCallback callback, final RealmModel realm,
+        final EventBuilder event, final KeycloakOIDCIdentityProvider provider) {
+      super(callback, realm, event, provider);
+    }
+
+    @GET
+    @Override
+    public Response authResponse(
+        @QueryParam(AbstractOAuth2IdentityProvider.OAUTH2_PARAMETER_STATE) final String state,
+        @QueryParam(AbstractOAuth2IdentityProvider.OAUTH2_PARAMETER_CODE) final String authorizationCode,
+        @QueryParam(OAuth2Constants.ERROR) final String error,
+        @QueryParam(OAuth2Constants.ERROR_DESCRIPTION) final String errorDescription) {
+
+      if (error == null || !error.equals(AbstractOAuth2IdentityProvider.ACCESS_DENIED) || state == null) {
+        return super.authResponse(state, authorizationCode, error, errorDescription);
+      }
+
+      try {
+        final AuthenticationSessionModel authSession = this.callback.getAndVerifyAuthenticationSession(state);
+        session.getContext().setAuthenticationSession(authSession);
+
+        final String encodedDescription = URLEncoder.encode(
+            Optional.ofNullable(errorDescription).orElse("Authentication cancelled by user."),
+            StandardCharsets.UTF_8);
+
+        final StringBuilder redirect = new StringBuilder(authSession.getRedirectUri())
+            .append("?error=access_denied")
+            .append("&error_description=").append(encodedDescription);
+
+        Optional.ofNullable(authSession.getClientNote("state"))
+            .ifPresent(s -> redirect.append("&state=").append(s));
+
+        Optional.ofNullable(authSession.getClientNote("iss"))
+            .ifPresent(i -> redirect.append("&iss=").append(i));
+
+        final String url = redirect.toString();
+        return Response.ok(REDIRECT_HTML.formatted(url, url))
+            .type(MediaType.TEXT_HTML_TYPE)
+            .build();
+
+      } catch (final Exception e) {
+        return super.authResponse(state, authorizationCode, error, errorDescription);
+      }
+    }
   }
 }

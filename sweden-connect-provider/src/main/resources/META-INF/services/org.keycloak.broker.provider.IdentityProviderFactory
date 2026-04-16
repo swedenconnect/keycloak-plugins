@@ -1,1 +1,2 @@
 se.swedenconnect.keycloak.oidc.ProxyProviderFactory
+se.swedenconnect.keycloak.saml.SwedenConnectSAMLIdentityProviderFactory

@@ -107,6 +107,14 @@ public class Rfc8707TokenEndpointExecutor
   private void executeOnTokenRequest(final TokenRequestContext context) throws ClientPolicyException {
     final List<String> rawResourceParams = context.getParams().get("resource");
     if (rawResourceParams == null || rawResourceParams.isEmpty()) {
+      // No resource at token endpoint — propagate the auth-time resource into the session
+      // attribute so ResourceMapper can set aud without relying on the note-transfer path.
+      if (context.getParseResult() != null && context.getParseResult().getClientSession() != null) {
+        final String authResource = context.getParseResult().getClientSession().getNote(AUTH_RESOURCE_VALIDATED);
+        if (authResource != null && !authResource.isBlank()) {
+          this.session.setAttribute(SESSION_ATTR_VALIDATED_RESOURCE, authResource);
+        }
+      }
       return;
     }
     // Rfc8707RequestWrapper collapses multiple resource= values to one comma-joined string

@@ -18,12 +18,12 @@ package se.swedenconnect.keycloak.servlet;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
-import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.container.PreMatching;
 import jakarta.ws.rs.ext.Provider;
 import org.jboss.logging.Logger;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -33,22 +33,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * JAX-RS {@link ContainerRequestFilter} that normalizes duplicate {@code resource} parameters
- * in OAuth 2.0 requests to support RFC 8707 (Resource Indicators for OAuth 2.0).
+ * JAX-RS {@link ContainerRequestFilter} that normalizes duplicate {@code resource} query
+ * parameters in OAuth 2.0 authorization (GET) requests to support RFC 8707.
  *
- * <p>Keycloak 26 rejects any form parameter that appears more than once with
- * {@code invalid_request: duplicated parameter}. This filter intercepts form-encoded POST
- * requests before Keycloak parses the body and collapses multiple {@code resource=} values
- * into a single comma-joined value. Any other duplicated parameters are reduced to their
- * first value. {@link se.swedenconnect.keycloak.oidc.Rfc8707TokenEndpointExecutor} splits
- * the comma-joined resource value back out during token processing.
+ * <p>Keycloak 26 rejects any parameter that appears more than once with
+ * {@code invalid_request: duplicated parameter}. This filter collapses multiple
+ * {@code resource=} query-string values into a single comma-joined value before Keycloak
+ * matches the route.
  *
- * <p>Registered as a JAX-RS {@code @Provider}. Keycloak 26 discovers it from the provider
- * JAR during {@code kc.sh build} (or at startup in dev mode).
+ * <p>Must be {@code @PreMatching} because RESTEasy Reactive only permits
+ * {@link ContainerRequestContext#setRequestUri} from pre-match filters. No body is read here,
+ * so running on the Vert.x IO thread is safe. POST body normalization is handled by the
+ * companion {@link Rfc8707PostBodyFilter} which runs post-match on a worker thread.
+ *
+ * <p>Keycloak 26 discovers this filter from the provider JAR during {@code kc.sh build}
+ * (or at startup in dev mode).
  *
  * @author Felix Hellman
  */
 @Provider
+@PreMatching
 public class Rfc8707ContainerRequestFilter implements ContainerRequestFilter {
 
   private static final Logger log = Logger.getLogger(Rfc8707ContainerRequestFilter.class);
@@ -57,30 +61,23 @@ public class Rfc8707ContainerRequestFilter implements ContainerRequestFilter {
 
   @Override
   public void filter(final ContainerRequestContext requestContext) throws IOException {
-    if (!"POST".equalsIgnoreCase(requestContext.getMethod())) {
+    if (!"GET".equalsIgnoreCase(requestContext.getMethod())) {
       return;
     }
-    final MediaType contentType = requestContext.getMediaType();
-    if (contentType == null || !contentType.isCompatible(MediaType.APPLICATION_FORM_URLENCODED_TYPE)) {
+    final URI requestUri = requestContext.getUriInfo().getRequestUri();
+    final String rawQuery = requestUri.getRawQuery();
+    if (rawQuery == null || rawQuery.isEmpty()) {
       return;
     }
-    if (requestContext.getEntityStream() == null) {
+    final String normalized = normalizeFormBody(rawQuery);
+    if (normalized.equals(rawQuery)) {
       return;
     }
-
-    final byte[] bodyBytes = requestContext.getEntityStream().readAllBytes();
-    if (bodyBytes.length == 0) {
-      return;
-    }
-
-    final String body = new String(bodyBytes, StandardCharsets.UTF_8);
-    final String normalized = normalizeFormBody(body);
-
-    if (!body.equals(normalized)) {
-      log.debugf("RFC 8707: collapsed duplicate resource parameters in form body");
-    }
-
-    requestContext.setEntityStream(new ByteArrayInputStream(normalized.getBytes(StandardCharsets.UTF_8)));
+    final String uriStr = requestUri.toString();
+    final int q = uriStr.indexOf('?');
+    final String base = q >= 0 ? uriStr.substring(0, q) : uriStr;
+    requestContext.setRequestUri(URI.create(base + "?" + normalized));
+    log.debugf("RFC 8707: collapsed duplicate resource parameters in query string");
   }
 
   /**
