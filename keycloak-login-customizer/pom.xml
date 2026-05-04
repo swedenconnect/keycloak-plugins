@@ -4,7 +4,7 @@
     <parent>
         <groupId>se.swedenconnect.keycloak</groupId>
         <artifactId>keycloak-plugins-parent</artifactId>
-        <version>0.4.9</version>
+        <version>0.4.10</version>
     </parent>
 
     <artifactId>keycloak-login-customizer</artifactId>
