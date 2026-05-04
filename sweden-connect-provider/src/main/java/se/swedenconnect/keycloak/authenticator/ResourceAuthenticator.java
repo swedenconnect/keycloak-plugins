@@ -72,7 +72,8 @@ public class ResourceAuthenticator implements Authenticator {
 
   @Override
   public void authenticate(final AuthenticationFlowContext context) {
-    validateAndRedirect(context);
+    validate(context);
+    context.success();
   }
 
   @Override
@@ -87,14 +88,13 @@ public class ResourceAuthenticator implements Authenticator {
    *
    * @param context the authentication-flow context
    */
-  private static void validateAndRedirect(final AuthenticationFlowContext context) {
+  private static void validate(final AuthenticationFlowContext context) {
     final String clientRequestParamResource = context.getAuthenticationSession()
         .getClientNotes().get("client_request_param_resource");
 
     if (clientRequestParamResource == null || clientRequestParamResource.isBlank()) {
       log.debugf("RFC 8707 ResourceAuthenticator: no resource parameter in request");
       context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, "");
-      redirectToIdp(context);
       return;
     }
 
@@ -130,7 +130,6 @@ public class ResourceAuthenticator implements Authenticator {
 
     context.getAuthenticationSession().setClientNote(VALIDATED_RESOURCE_ATT, String.join(",", requestedResources));
     log.debugf("RFC 8707 ResourceAuthenticator: resource indicator validated [%s]", requestedResources);
-    redirectToIdp(context);
   }
 
   /**
