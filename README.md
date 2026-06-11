@@ -18,6 +18,8 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 - [Sweden Connect Provider](docs/sweden-connect-provider.MD)
 - [Keycloak Login Customizer](docs/keycloak-login-customizer.MD)
 - [Tools](docs/tools.MD)
+- [IdP-Hint OIDC Provider](idp-hint-oidc-provider/README.md)
+- [SAML Session Note Mapper](saml-session-note-mapper/README.md)
 
 ## Contributing
 
@@ -29,4 +31,4 @@ The Keycloak Plugins is Open Source software released under the [Apache License]
 
 -----
 
-Copyright &copy; 2025, [Myndigheten för digital förvaltning - Swedish Agency for Digital Government (DIGG)](http://www.digg.se). Licensed under version 2.0 of the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
+Copyright &copy; 2025-2026, [Myndigheten för digital förvaltning - Swedish Agency for Digital Government (DIGG)](http://www.digg.se). Licensed under version 2.0 of the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).

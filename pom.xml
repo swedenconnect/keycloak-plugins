@@ -32,6 +32,8 @@
         <module>keycloak-login-customizer</module>
         <module>pkcs11</module>
         <module>oidf</module>
+        <module>idp-hint-oidc-provider</module>
+        <module>saml-session-note-mapper</module>
     </modules>
 
     <properties>
@@ -100,7 +102,7 @@
                     <checkstyleRules>
                         <module name="Checker">
                             <module name="RegexpHeader">
-                                <property name="header" value="/*\n * Copyright (2024-)?2025 Sweden Connect"/>
+                                <property name="header" value="/*\n * Copyright (202[45]-)?202[56] Sweden Connect"/>
                             </module>
                             <module name="LineLength">
                                 <property name="max" value="120"/>
