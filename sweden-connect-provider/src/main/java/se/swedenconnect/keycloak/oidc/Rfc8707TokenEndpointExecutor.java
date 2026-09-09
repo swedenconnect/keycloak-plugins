@@ -176,7 +176,16 @@ public class Rfc8707TokenEndpointExecutor
         .filter(s -> !s.isEmpty())
         .collect(Collectors.toList());
 
-    final Set<String> allowedResources = getAllowedResourcesForClient(context.getClient());
+    // TokenRefreshContext.getClient() was added in Keycloak 26.4. The authenticated client is
+    // placed on the session context by AuthorizeClientUtil at the token endpoint in 26.2 as well,
+    // so reading it from there keeps the executor usable on both versions.
+    final ClientModel client = this.session.getContext().getClient();
+    if (client == null) {
+      log.warnf("TOKEN_REFRESH: no authenticated client on the session context; skipping validation");
+      return;
+    }
+
+    final Set<String> allowedResources = getAllowedResourcesForClient(client);
     if (allowedResources.isEmpty()) {
       throw new ClientPolicyException(
           INVALID_TARGET,
