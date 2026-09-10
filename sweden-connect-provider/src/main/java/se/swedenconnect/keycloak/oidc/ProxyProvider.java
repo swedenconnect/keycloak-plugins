@@ -26,7 +26,7 @@ import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.KeycloakOIDCIdentityProvider;
 import org.keycloak.broker.oidc.OIDCIdentityProviderConfig;
 import org.keycloak.broker.provider.AuthenticationRequest;
-import org.keycloak.broker.provider.IdentityProvider;
+import org.keycloak.broker.provider.UserAuthenticationIdentityProvider;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -81,7 +81,9 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
   }
 
   @Override
-  public Object callback(final RealmModel realm, final IdentityProvider.AuthenticationCallback callback,
+  public Object callback(
+      final RealmModel realm,
+      final UserAuthenticationIdentityProvider.AuthenticationCallback callback,
       final EventBuilder event) {
     return new ProxyEndpoint(callback, realm, event, this);
   }
@@ -110,8 +112,11 @@ public class ProxyProvider extends KeycloakOIDCIdentityProvider {
 
   protected static class ProxyEndpoint extends KeycloakOIDCIdentityProvider.KeycloakEndpoint {
 
-    public ProxyEndpoint(final IdentityProvider.AuthenticationCallback callback, final RealmModel realm,
-        final EventBuilder event, final KeycloakOIDCIdentityProvider provider) {
+    public ProxyEndpoint(
+        final UserAuthenticationIdentityProvider.AuthenticationCallback callback,
+        final RealmModel realm,
+        final EventBuilder event,
+        final KeycloakOIDCIdentityProvider provider) {
       super(callback, realm, event, provider);
     }
 

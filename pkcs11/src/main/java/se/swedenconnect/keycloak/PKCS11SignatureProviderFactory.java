@@ -34,6 +34,9 @@ import se.swedenconnect.security.credential.pkcs11.SunPkcs11PrivateKeyAccessor;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Factory class for creating signature provider for PKCS#11.
@@ -44,9 +47,28 @@ public class PKCS11SignatureProviderFactory implements SignatureProviderFactory 
 
   private static final Logger log = Logger.getLogger(PKCS11SignatureProviderFactory.class);
 
+  /**
+   * An HSM key handled by this provider is either RSA or EC, so both claim sets are reported.
+   */
+  private static final Set<String> PRIVATE_JWK_CLAIMS = Stream.concat(
+          SignatureProviderFactory.RSA_PRIVATE_JWK_CLAIMS.stream(),
+          SignatureProviderFactory.EC_PRIVATE_JWK_CLAIMS.stream())
+      .collect(Collectors.toUnmodifiableSet());
+
   @Override
   public SignatureProvider create(final KeycloakSession session) {
     return new PKCS11SignatureProvider(session);
+  }
+
+  /**
+   * Reports the JWK members that carry private key material, so that Keycloak can reject
+   * externally supplied JWKs containing a private key.
+   *
+   * @return union of the RSA and EC private JWK claim names
+   */
+  @Override
+  public Set<String> getJwkPrivateKeyClaims() {
+    return PRIVATE_JWK_CLAIMS;
   }
 
   @Override

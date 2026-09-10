@@ -16,7 +16,7 @@
  */
 package se.swedenconnect.keycloak.saml;
 
-import org.keycloak.broker.provider.IdentityProvider;
+import org.keycloak.broker.provider.UserAuthenticationIdentityProvider;
 import org.keycloak.broker.saml.SAMLIdentityProvider;
 import org.keycloak.broker.saml.SAMLIdentityProviderConfig;
 import org.keycloak.events.EventBuilder;
@@ -51,7 +51,7 @@ public class SwedenConnectSAMLIdentityProvider extends SAMLIdentityProvider {
   @Override
   public Object callback(
       final RealmModel realm,
-      final IdentityProvider.AuthenticationCallback callback,
+      final UserAuthenticationIdentityProvider.AuthenticationCallback callback,
       final EventBuilder event) {
     return new SwedenConnectSAMLEndpoint(session, this, getConfig(), callback, this.destinationValidator);
   }

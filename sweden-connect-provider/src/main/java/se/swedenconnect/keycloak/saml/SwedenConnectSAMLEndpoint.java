@@ -23,7 +23,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.keycloak.broker.provider.IdentityProvider;
+import org.keycloak.broker.provider.UserAuthenticationIdentityProvider;
 import org.keycloak.broker.saml.SAMLEndpoint;
 import org.keycloak.broker.saml.SAMLIdentityProvider;
 import org.keycloak.broker.saml.SAMLIdentityProviderConfig;
@@ -82,7 +82,7 @@ public class SwedenConnectSAMLEndpoint extends SAMLEndpoint {
       final KeycloakSession session,
       final SAMLIdentityProvider provider,
       final SAMLIdentityProviderConfig config,
-      final IdentityProvider.AuthenticationCallback callback,
+      final UserAuthenticationIdentityProvider.AuthenticationCallback callback,
       final DestinationValidator destinationValidator) {
     super(session, provider, config, callback, destinationValidator);
     this.keycloakSession = session;
