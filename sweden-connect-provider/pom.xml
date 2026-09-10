@@ -73,6 +73,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-saml-core</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.github.dasniko</groupId>
@@ -90,6 +91,7 @@
             <groupId>se.swedenconnect.keycloak</groupId>
             <artifactId>tools</artifactId>
             <version>0.4.9</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
