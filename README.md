@@ -16,6 +16,7 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 ## Documentation
 
 - [Release notes](docs/release-notes.md)
+- [Releasing](docs/releasing.md) (maintainers)
 - [Sweden Connect Provider](docs/sweden-connect-provider.MD)
 - [Keycloak Login Customizer](docs/keycloak-login-customizer.MD)
 - [Tools](docs/tools.MD)

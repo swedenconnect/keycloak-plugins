@@ -32,13 +32,13 @@ Releases made before this file was introduced are not listed here. See the
   asserts user creation rather than claim propagation, since the claim it checked came from one of
   them. See [Integration Tests](../integration-tests/README.md).
 
-- **Pending: first publication to Maven Central.** Releases so far have been built from an internal
-  mirror and published to an internal Nexus only. Publishing to Maven Central additionally requires
-  the POM metadata Central mandates (`name`, `description`, `licenses`, `developers`, `scm`, and a
-  real `url` in place of the archetype placeholder), plus a `release` profile carrying
-  `central-publishing-maven-plugin`, `maven-gpg-plugin` and the source and javadoc JARs. This is
-  why 0.6.0 does not reuse the 0.5.0 version number: 0.5.0 already exists internally with a
-  different module set, and Maven Central is immutable.
+- **Pending: first publication to Maven Central.** No release has been published to a public
+  repository so far, so consumers build from source. Publication requires the POM metadata Central
+  mandates (`name`, `description`, `licenses`, `developers`, `scm`, and a real `url` in place of
+  the archetype placeholder), plus a `release` profile carrying `central-publishing-maven-plugin`,
+  `maven-gpg-plugin` and the source and javadoc JARs. This is also why 0.6.0 does not reuse the
+  0.5.0 version number: 0.5.0 has already been released with a different module set, and Maven
+  Central is immutable.
 
 ---
 
@@ -46,8 +46,8 @@ Releases made before this file was introduced are not listed here. See the
 
 **Date:** 2026-09-16
 
-**Availability.** This version is published to the internal Nexus only. The artifacts are not on
-Maven Central; see the 0.6.0 notes for the work that publication requires.
+**Availability.** This release is not published to Maven Central. Build it from source at the
+`v0.5.0` tag; see the 0.6.0 notes for the work public publication requires.
 
 - **The plugins now target Keycloak 26.7 and no longer support 26.4 or 26.2.** Keycloak 26.7
   splits `IdentityProvider`: the user-authentication half moved to the new

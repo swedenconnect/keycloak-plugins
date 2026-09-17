@@ -86,6 +86,20 @@ Include the following header in all Java files:
 
 Configure Eclipse or IntelliJ to do it automatically!
 
+## Versioning
+
+The project is pre-1.0, so the **minor** number carries breaking changes:
+
+- **Minor** (`0.5.0` to `0.6.0`) for anything a consumer must react to: requiring a new Keycloak
+  version, removing a module, or removing a provider ID.
+- **Patch** (`0.6.0` to `0.6.1`) for fixes and additions that are drop-in.
+
+Say in your pull request which of the two your change implies, and why, if it is not obvious. It
+decides when the change can be released rather than whether it is accepted.
+
+Releasing and tagging are done by the maintainers; the process is described in
+[Releasing](docs/releasing.md).
+
 -----
 
 Copyright &copy; 2025, [Myndigheten för digital förvaltning - Swedish Agency for Digital Government (DIGG)](http://www.digg.se). Licensed under version 2.0 of the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
