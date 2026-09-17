@@ -10,6 +10,38 @@ Releases made before this file was introduced are not listed here. See the
 
 ---
 
+### Version 0.6.0
+
+**Date:** _not yet released_
+
+- **`idp-hint-oidc-provider` and `saml-session-note-mapper` are parked.** Neither is built by the
+  default reactor and neither is released. The code stays in the repository until a new home is
+  decided for it, and a new `parked` profile keeps both compiling, with their unit tests running,
+  against the Keycloak version this repository targets:
+
+  ```bash
+  mvn -Pparked verify
+  ```
+
+  **Affects deployments.** Four provider IDs are no longer shipped: `oidc-idp-hint`,
+  `saml-session-note-mapper`, `transient-session-note-claim-mapper` and
+  `oidc-claim-to-broker-id-mapper`. A realm configured to use any of them must keep the 0.5.0 JARs
+  in place, or wait for the modules to be republished from their new home. Nothing else changes.
+
+  The integration tests no longer cover the parked modules, and the persisted-user SAML test now
+  asserts user creation rather than claim propagation, since the claim it checked came from one of
+  them. See [Integration Tests](../integration-tests/README.md).
+
+- **Pending: first publication to Maven Central.** Releases so far have been built from an internal
+  mirror and published to an internal Nexus only. Publishing to Maven Central additionally requires
+  the POM metadata Central mandates (`name`, `description`, `licenses`, `developers`, `scm`, and a
+  real `url` in place of the archetype placeholder), plus a `release` profile carrying
+  `central-publishing-maven-plugin`, `maven-gpg-plugin` and the source and javadoc JARs. This is
+  why 0.6.0 does not reuse the 0.5.0 version number: 0.5.0 already exists internally with a
+  different module set, and Maven Central is immutable.
+
+---
+
 ### Version 0.5.0
 
 **Date:** 2026-09-16

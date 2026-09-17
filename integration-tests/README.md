@@ -32,12 +32,17 @@ sp   - the realm under test: brokers to the two above through this repository's 
 
 | Test | Path exercised |
 |---|---|
-| `samlBrokeredLoginPersistsUserAndPropagatesPersonalIdentityNumber` | SAML broker, persisted users: user creation, names, federated link, personnummer via saml-session-note-mapper |
+| `samlBrokeredLoginPersistsUserFromTheAssertion` | SAML broker, persisted users: user creation, username from the personnummer attribute, names, federated link |
 | `samlBrokeredLoginWithTransientUsersIssuesSwedenConnectClaims` | SAML broker with `doNotStoreUsers=true` (the Sweden Connect proxy mode): the full Sweden-Connect claim set and the acr |
 | `oidcProxyLoginForwardsScopesAndIssuesSwedenConnectClaims` | ProxyProvider forwarding the Sweden Connect scopes upstream, Sweden-Connect-OP mapping the returned claims |
-| `idpHintProviderForwardsHintFromBrokerUrl` | idp-hint-oidc-provider forwarding `kc_idp_hint` from the broker button URL |
 | `cancelledSamlResponseReturnsAccessDeniedToTheClient` | SwedenConnectSAMLEndpoint turning the Sweden Connect cancel status into `error=access_denied` |
 | `spMetadataCarriesSwedenConnectExtensions` | Sweden-Connect-SAML-Mapper acting as a metadata updater |
+
+### Not covered: the parked modules
+
+`idp-hint-oidc-provider` and `saml-session-note-mapper` are built only under `-Pparked` and are not
+staged into the container, so nothing here exercises them. Their own unit tests still run with that
+profile. When either finds a new home, its integration coverage should move with it.
 
 The SAML brokers are configured not to validate signatures, so the Keycloak-issued (and, for the
 cancel test, hand-built) SAML responses are accepted without a signing key. The Sweden Connect
@@ -48,6 +53,9 @@ proxy realms deploy with `doNotStoreUsers=true`; the transient test is the one t
 ```bash
 # from the repository root: builds the plugin jars and runs both IT classes
 mvn -pl integration-tests -am verify
+
+# build the parked modules too, so they keep compiling and their unit tests run
+mvn -Pparked verify
 
 # just the integration tests, using already-built jars
 mvn -pl integration-tests verify

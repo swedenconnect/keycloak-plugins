@@ -104,10 +104,6 @@ class BrokeredLoginIT {
   private static final String INFO_SCOPE = "https://id.oidc.se/scope/naturalPersonInfo";
   private static final String KEYCLOAK_SAML_ACR = "urn:oasis:names:tc:SAML:2.0:ac:classes:unspecified";
 
-  /** Written by saml-session-note-mapper, read by transient-session-note-claim-mapper. */
-  private static final String SESSION_NOTE = "transient_personal_identity_number";
-  private static final String SESSION_NOTE_CLAIM = "personalIdentityNumber";
-
   private static final String IDP_REALM = "idp";
   private static final String OP_REALM = "op";
   private static final String SP_REALM = "sp";
@@ -117,7 +113,6 @@ class BrokeredLoginIT {
   private static final String SAML_PERSISTENT = "saml-persistent";
   private static final String SAML_TRANSIENT = "saml-transient";
   private static final String OIDC_PROXY = "proxy-oidc";
-  private static final String OIDC_HINT = "hint-oidc";
   private static final String ORG_NAME = "Testmyndigheten";
   private static final String ENTITY_CATEGORY = "http://id.elegnamnden.se/ec/1.0/loa3-pnr";
   private static final String CANCEL_STATUS = "http://id.elegnamnden.se/status/1.0/cancel";
@@ -150,38 +145,27 @@ class BrokeredLoginIT {
   // ===========================================================================================
 
   /**
-   * SAML broker with persisted users: the assertion is turned into a real Keycloak user through
-   * the plugins, and the personnummer is propagated as an OIDC claim.
+   * SAML broker with persisted users: Sweden-Connect-SAML-Mapper turns the assertion into a real
+   * Keycloak user, taking the username from the configured personnummer attribute and the names
+   * from their {@code urn:oid} attributes, and links that user to the broker.
    *
-   * <p>Two propagation paths run for this broker, and they behave differently for persisted users:
-   *
-   * <ul>
-   *   <li>saml-session-note-mapper writes the personnummer both to a user session note <em>and</em>
-   *       (in {@code importNewUser}) to a user-model attribute, so transient-session-note-claim-mapper
-   *       reaches it through the attribute even after Keycloak's first-broker-login {@code resetFlow}
-   *       clears the session notes. This is asserted below.</li>
-   *   <li>Sweden-Connect-SAML-Mapper stores the whole assertion under the {@code SAML_ATTRIBUTES_JSON}
-   *       session note, which the Sweden-Connect protocol mapper reads. That note is set on the
-   *       authentication session and is <em>not</em> repopulated as a user attribute for persisted
-   *       users, so first-broker-login's {@code resetFlow} discards it and its claims do not reach
-   *       the token. That path is exercised by {@link #samlBrokeredLoginWithTransientUsersIssuesSwedenConnectClaims()},
-   *       which is the mode the Sweden Connect proxy realms actually run in
-   *       ({@code doNotStoreUsers=true}); it deliberately is not asserted here.</li>
-   * </ul>
+   * <p>No Sweden Connect <em>claims</em> are asserted here, because they do not reach the token in
+   * this mode. Sweden-Connect-SAML-Mapper stores the assertion under the
+   * {@code SAML_ATTRIBUTES_JSON} user session note, which the Sweden-Connect protocol mapper reads,
+   * and Keycloak's first-broker-login {@code resetFlow} clears that note. It is only repopulated as
+   * attributes on the lightweight user when {@code doNotStoreUsers=true}. The claim path is
+   * therefore covered by {@link #samlBrokeredLoginWithTransientUsersIssuesSwedenConnectClaims()},
+   * which is the mode the Sweden Connect proxy realms actually run in.
    */
   @Test
-  void samlBrokeredLoginPersistsUserAndPropagatesPersonalIdentityNumber() {
+  void samlBrokeredLoginPersistsUserFromTheAssertion() {
     final Browser browser = new Browser();
     final String code = loginThroughSaml(browser, SAML_PERSISTENT);
     final Tokens tokens = exchange(browser, code);
 
     assertFalse(String.valueOf(tokens.idToken().get("sub")).startsWith("lightweight-"),
         "Users are persisted for this broker, so the subject must not be a transient user");
-    assertEquals(PNR, tokens.idToken().get(SESSION_NOTE_CLAIM),
-        "personnummer in the id token, carried by saml-session-note-mapper + transient-session-note-claim-mapper");
-    assertEquals(PNR, tokens.accessToken().get(SESSION_NOTE_CLAIM), "personnummer in the access token");
     assertEquals(CLIENT_ID, tokens.accessToken().get("client_id"), "client_id claim set by the Sweden-Connect mapper");
-    assertEquals(PNR, tokens.userInfo().get(SESSION_NOTE_CLAIM), "personnummer in UserInfo");
 
     // Sweden-Connect-SAML-Mapper (attribute.username.key) sets the created user's username to the
     // personnummer carried in that SAML attribute, not to the IdP's own "anna" login name.
@@ -192,8 +176,6 @@ class BrokeredLoginIT {
     final UserRepresentation full = admin.realm(SP_REALM).users().get(user.getId()).toRepresentation();
     assertEquals(GIVEN_NAME, full.getFirstName(), "first name taken from urn:oid:2.5.4.42");
     assertEquals(FAMILY_NAME, full.getLastName(), "last name taken from urn:oid:2.5.4.4");
-    assertEquals(List.of(PNR), full.getAttributes().get(SESSION_NOTE),
-        "saml-session-note-mapper.importNewUser stores the attribute on the created user");
     final List<String> links = admin.realm(SP_REALM).users().get(user.getId()).getFederatedIdentity().stream()
         .map(FederatedIdentityRepresentation::getIdentityProvider)
         .toList();
@@ -214,7 +196,6 @@ class BrokeredLoginIT {
     assertTrue(String.valueOf(tokens.idToken().get("sub")).startsWith("lightweight-"),
         "doNotStoreUsers=true must produce a transient user, sub was " + tokens.idToken().get("sub"));
     assertEquals(PNR, tokens.idToken().get(PNR_CLAIM), "personalIdentityNumber claim in the id token");
-    assertEquals(PNR, tokens.idToken().get(SESSION_NOTE_CLAIM), "session-note claim in the id token");
     assertEquals(KEYCLOAK_SAML_ACR, tokens.idToken().get("acr"),
         "acr taken from the assertion's AuthnContextClassRef (the built-in acr scope is not on the client)");
 
@@ -267,22 +248,6 @@ class BrokeredLoginIT {
     assertEquals(FAMILY_NAME, userInfo.get("family_name"), "family_name in UserInfo");
     assertEquals(DISPLAY_NAME, userInfo.get("name"), "name in UserInfo");
     assertEquals(BIRTHDATE, userInfo.get("birthdate"), "birthdate in UserInfo");
-  }
-
-  /**
-   * idp-hint-oidc-provider: a {@code kc_idp_hint} on the broker button URL itself, which Keycloak's
-   * own OIDC provider drops, must be forwarded to the upstream authorization request.
-   */
-  @Test
-  void idpHintProviderForwardsHintFromBrokerUrl() {
-    final Browser browser = new Browser();
-    final String brokerLink = brokerLink(browser, OIDC_HINT, "", "st-" + UUID.randomUUID());
-
-    final Browser.Page redirect = browser.getWithoutRedirect(brokerLink + "&kc_idp_hint=bankid");
-    final String upstream = redirect.location().orElseThrow(() -> new AssertionError(
-        "Expected a redirect to the OP, got " + redirect.status() + ":\n" + excerpt(redirect.body())));
-    assertEquals("bankid", Browser.queryParameters(upstream).get("kc_idp_hint"),
-        "kc_idp_hint must be forwarded upstream, redirect was " + upstream);
   }
 
   /**
@@ -475,7 +440,7 @@ class BrokeredLoginIT {
     client.setSecret(OP_CLIENT_SECRET);
     client.setPublicClient(false);
     client.setStandardFlowEnabled(true);
-    client.setRedirectUris(List.of(brokerEndpoint(OIDC_PROXY), brokerEndpoint(OIDC_HINT)));
+    client.setRedirectUris(List.of(brokerEndpoint(OIDC_PROXY)));
     client.setDefaultClientScopes(List.of("basic", "profile", "email"));
     client.setOptionalClientScopes(List.of(NUMBER_SCOPE, INFO_SCOPE));
     client.setProtocolMappers(List.of(
@@ -504,16 +469,13 @@ class BrokeredLoginIT {
     // No profile/email/acr scopes: every asserted claim must come from this repository's mappers.
     client.setDefaultClientScopes(List.of("basic"));
     client.setOptionalClientScopes(List.of(NUMBER_SCOPE, INFO_SCOPE));
-    client.setProtocolMappers(List.of(
-        swedenConnectProtocolMapper(),
-        sessionNoteClaimMapper()));
+    client.setProtocolMappers(List.of(swedenConnectProtocolMapper()));
     created(admin.realm(SP_REALM).clients().create(client));
 
     createSamlBroker(SAML_PERSISTENT, false, 1);
     createSamlBroker(SAML_TRANSIENT, true, 2);
     createOidcBroker(OIDC_PROXY, "keycloak-oidc");
     addIdpMapper(OIDC_PROXY, "Sweden-Connect-OP", Map.of("syncMode", "INHERIT"));
-    createOidcBroker(OIDC_HINT, "oidc-idp-hint");
   }
 
   private static void createSamlBroker(final String alias, final boolean transientUsers, final int acsIndex) {
@@ -540,10 +502,6 @@ class BrokeredLoginIT {
         "attribute.contact.technical.email", "tech@example.se",
         "attribute.contact.support.email", "support@example.se",
         "attribute.entity.key", "[{\"key\":\"0\",\"value\":\"" + ENTITY_CATEGORY + "\"}]"));
-    addIdpMapper(alias, "saml-session-note-mapper", Map.of(
-        "syncMode", "INHERIT",
-        "attribute.name", PNR_ATTRIBUTE,
-        "session.note", SESSION_NOTE));
   }
 
   /**
@@ -597,21 +555,6 @@ class BrokeredLoginIT {
     mapper.setProtocolMapper("Sweden-Connect");
     mapper.setConfig(new HashMap<>(Map.of(
         "attribute.access.token.key", "[{\"key\":\"" + PNR_ATTRIBUTE + "\",\"value\":\"" + PNR_CLAIM + "\"}]")));
-    return mapper;
-  }
-
-  private static ProtocolMapperRepresentation sessionNoteClaimMapper() {
-    final ProtocolMapperRepresentation mapper = new ProtocolMapperRepresentation();
-    mapper.setName("session-note-to-claim");
-    mapper.setProtocol("openid-connect");
-    mapper.setProtocolMapper("transient-session-note-claim-mapper");
-    mapper.setConfig(new HashMap<>(Map.of(
-        "session.note", SESSION_NOTE,
-        "claim.name", SESSION_NOTE_CLAIM,
-        "jsonType.label", "String",
-        "id.token.claim", "true",
-        "access.token.claim", "true",
-        "userinfo.token.claim", "true")));
     return mapper;
   }
 

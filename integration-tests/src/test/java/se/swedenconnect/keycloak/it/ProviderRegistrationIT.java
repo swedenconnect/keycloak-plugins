@@ -54,19 +54,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProviderRegistrationIT {
 
   /**
-   * Every {@code getId()} return value in the repository. Regenerate by grepping for
-   * {@code String getId()} across the {@code src/main/java} tree of every module.
+   * Every {@code getId()} return value of the modules the default reactor builds. Regenerate by
+   * grepping for {@code String getId()} across the {@code src/main/java} tree of every module.
+   *
+   * <p>The parked modules are deliberately absent: {@code idp-hint-oidc-provider}
+   * ({@code oidc-idp-hint}) and {@code saml-session-note-mapper}
+   * ({@code saml-session-note-mapper}, {@code transient-session-note-claim-mapper},
+   * {@code oidc-claim-to-broker-id-mapper}) are built only under {@code -Pparked} and are not
+   * staged into the container, so the server never registers them here.
    */
   private static final Set<String> EXPECTED_PROVIDER_IDS = Set.of(
-      "oidc-idp-hint",
       "IDP-FILTER",
       "Idp-Selector",
       "oidf",
       "pkcs-11-hsm-key",
       "PKCS11-Signature-Provider",
-      "transient-session-note-claim-mapper",
-      "oidc-claim-to-broker-id-mapper",
-      "saml-session-note-mapper",
       "Sweden-Connect",
       "Sweden-Connect-OP",
       "Sweden-Connect-SAML-Mapper",
