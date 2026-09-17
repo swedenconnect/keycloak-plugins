@@ -478,6 +478,21 @@ class BrokeredLoginIT {
     addIdpMapper(OIDC_PROXY, "Sweden-Connect-OP", Map.of("syncMode", "INHERIT"));
   }
 
+  /**
+   * Creates a SAML broker against the throwaway IdP realm.
+   *
+   * <p><strong>Signature validation is deliberately off here, and this configuration must not be
+   * copied into a deployment.</strong> The fake IdP has no key material the broker trusts, and the
+   * cancel test hand-builds an unsigned response, so {@code validateSignature},
+   * {@code wantAssertionsSigned} and {@code wantAuthnRequestsSigned} are all false. That is
+   * acceptable against a container that lives for the duration of one test run.
+   *
+   * <p>In production these must be on. CVE-2026-2092 is an unauthorized-access flaw in Keycloak's
+   * SAML broker endpoint: encrypted assertions are not properly validated when the overall SAML
+   * response is unsigned, letting a holder of one valid signed assertion inject an encrypted
+   * assertion for an arbitrary principal. Every Keycloak from 26.5.0 onwards is affected and no
+   * fixed release exists yet, so requiring signed responses is the mitigation.
+   */
   private static void createSamlBroker(final String alias, final boolean transientUsers, final int acsIndex) {
     final Map<String, String> config = new HashMap<>(Map.of(
         "singleSignOnServiceUrl", base + "/realms/" + IDP_REALM + "/protocol/saml",
