@@ -12,7 +12,10 @@ Releases made before this file was introduced are not listed here. See the
 
 ### Version 0.5.0
 
-**Date:** _not yet released_
+**Date:** 2026-09-16
+
+**Availability.** This version is published to the internal Nexus only. The artifacts are not on
+Maven Central; see the 0.6.0 notes for the work that publication requires.
 
 - **The plugins now target Keycloak 26.7 and no longer support 26.4 or 26.2.** Keycloak 26.7
   splits `IdentityProvider`: the user-authentication half moved to the new
