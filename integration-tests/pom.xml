@@ -36,6 +36,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <providers.dir>${project.build.directory}/providers</providers.dir>
+        <!--
+          This module has no src/main/java: its jar carries nothing but Maven metadata. Deploying it
+          would publish an empty artifact to whichever repository the build targets, so it is never
+          deployed. It is still built and installed, because the reactor runs its tests.
+        -->
+        <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
 
     <dependencies>
