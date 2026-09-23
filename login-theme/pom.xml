@@ -1,0 +1,39 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>se.swedenconnect.keycloak</groupId>
+    <artifactId>keycloak-plugins-parent</artifactId>
+    <version>0.6.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>login-theme</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Sweden Connect :: Keycloak :: Login Theme</name>
+  <description>Keycloak login theme SwedenconnectIdpPsw. Lists the identity providers first, with the username and password form behind a last button.</description>
+
+  <!--
+    A theme JAR holds resources only: META-INF/keycloak-themes.json, which Keycloak reads to find the
+    theme, and the theme itself under theme/. There is no Java code and nothing is filtered, since
+    the fonts and the logo must reach the JAR byte for byte.
+  -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Title>${project.artifactId}</Implementation-Title>
+              <Implementation-Version>${project.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

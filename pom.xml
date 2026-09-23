@@ -32,6 +32,7 @@
         <module>keycloak-login-customizer</module>
         <module>pkcs11</module>
         <module>oidf</module>
+        <module>login-theme</module>
         <module>integration-tests</module>
     </modules>
 
@@ -118,6 +119,8 @@
                     <sourceDirectories>
                         <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
                     </sourceDirectories>
+                    <includeResources>false</includeResources>
+                    <includeTestResources>false</includeTestResources>
                     <checkstyleRules>
                         <module name="Checker">
                             <module name="RegexpHeader">
