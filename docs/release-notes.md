@@ -9,7 +9,12 @@ Releases made before this file was introduced are not listed here. See the
 [repository tags](https://github.com/swedenconnect/keycloak-plugins/tags) for their history.
 
 ---
+### Version 0.7.0
 
+**Date:** <ToBeSet>
+- New Features 
+
+---
 ### Version 0.6.0
 
 **Date:** 2026-09-24
