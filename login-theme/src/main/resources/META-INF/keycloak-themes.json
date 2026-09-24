@@ -1,0 +1,22 @@
+{
+  "themes": [
+    {
+      "name": "SwedenconnectIdpPsw",
+      "types": [
+        "login"
+      ]
+    },
+    {
+      "name": "SwedenconnectDS",
+      "types": [
+        "login"
+      ]
+    },
+    {
+      "name": "DiggDs",
+      "types": [
+        "login"
+      ]
+    }
+  ]
+}
