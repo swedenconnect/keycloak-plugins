@@ -12,7 +12,8 @@ Releases made before this file was introduced are not listed here. See the
 
 ### Version 0.6.0
 
-**Date:** _not yet released_
+**Date:** 2026-09-24
+- ** Three new login theme for Swedenconnect and Digg **
 
 - **`idp-hint-oidc-provider` and `saml-session-note-mapper` are parked.** Neither is built by the
   default reactor and neither is released. The code stays in the repository until a new home is
