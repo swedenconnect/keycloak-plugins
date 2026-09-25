@@ -24,7 +24,36 @@
     <version>0.7.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <url>http://maven.apache.org</url>
+    <name>Sweden Connect :: Keycloak :: Plugins :: Parent POM</name>
+    <description>Parent POM for the Sweden Connect Keycloak plugins</description>
+    <url>https://github.com/swedenconnect/keycloak-plugins</url>
+
+    <scm>
+        <connection>scm:git:https://github.com/swedenconnect/keycloak-plugins.git</connection>
+        <developerConnection>scm:git:https://github.com/swedenconnect/keycloak-plugins.git</developerConnection>
+        <url>https://github.com/swedenconnect/keycloak-plugins/tree/main</url>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>Sweden Connect</name>
+        <url>https://www.swedenconnect.se</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <name>Sweden Connect</name>
+            <organization>Sweden Connect</organization>
+            <organizationUrl>https://www.swedenconnect.se</organizationUrl>
+        </developer>
+    </developers>
 
     <modules>
         <module>sweden-connect-provider</module>
@@ -54,6 +83,75 @@
                 <module>idp-hint-oidc-provider</module>
                 <module>saml-session-note-mapper</module>
             </modules>
+        </profile>
+
+        <!--
+          Publishing to Maven Central. Attaches the sources and javadoc jars that Central requires,
+          signs every artifact with GPG, and uploads through the Sonatype Central publishing plugin.
+          The credentials are taken from the server with id "central" in settings.xml:
+
+              mvn -Prelease clean deploy
+        -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <phase>process-sources</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <doctitle>Sweden Connect - Keycloak Plugins - ${project.version}</doctitle>
+                            <windowtitle>Keycloak Plugins - ${project.version}</windowtitle>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadoc</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
@@ -94,6 +192,75 @@
     </dependencyManagement>
 
     <build>
+
+        <!--
+          The release build must be reproducible, so every plugin it runs is pinned here rather
+          than being resolved to whatever version the Maven lifecycle happens to default to.
+        -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.15.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.12.0</version>
+                    <configuration>
+                        <doclint>all,-missing</doclint>
+                        <detectJavaApiLink>true</detectJavaApiLink>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.2.8</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>0.11.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
         <plugins>
             <!-- Style-check -->
             <plugin>

@@ -2,8 +2,7 @@
 
 # Keycloak Plugins
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
-![Version](https://img.shields.io/badge/Version-_0.6.0--SNAPSHOT-yellow)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.keycloak/keycloak-plugins-parent.svg)
 
 Keycloak Plugins for use with Sweden Connect Federation
 

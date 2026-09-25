@@ -28,7 +28,9 @@
     <artifactId>sweden-connect-provider</artifactId>
     <packaging>jar</packaging>
 
-    <name>Sweden Connect Provider</name>
+    <name>Sweden Connect :: Keycloak :: Sweden Connect Provider</name>
+    <description>Keycloak SPI plugin that translates SAML attributes from a Sweden Connect identity
+        provider into OIDC claims, by way of user session notes</description>
     <url>https://github.com/swedenconnect/keycloak-plugins</url>
 
     <properties>

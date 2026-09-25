@@ -10,8 +10,10 @@
     <artifactId>keycloak-login-customizer</artifactId>
     <packaging>jar</packaging>
 
-    <name>keycloak-login-customizer</name>
-    <url>http://maven.apache.org</url>
+    <name>Sweden Connect :: Keycloak :: Login Customizer</name>
+    <description>Keycloak SPI plugin that lets a client restrict which identity providers are offered
+        on the login screen, and records the selected provider as a token claim</description>
+    <url>https://github.com/swedenconnect/keycloak-plugins</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

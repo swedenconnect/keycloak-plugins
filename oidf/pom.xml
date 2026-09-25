@@ -28,7 +28,9 @@
     <artifactId>oidf</artifactId>
     <packaging>jar</packaging>
 
-    <name>Sweden Connect Provider</name>
+    <name>Sweden Connect :: Keycloak :: OpenID Federation</name>
+    <description>Keycloak SPI plugin that publishes an OpenID Federation entity configuration for a
+        realm and signs it with the realm's keys</description>
     <url>https://github.com/swedenconnect/keycloak-plugins</url>
 
     <properties>

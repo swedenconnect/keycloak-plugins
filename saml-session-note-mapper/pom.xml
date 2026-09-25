@@ -19,6 +19,13 @@
     into downstream tokens without persisting personal data.
   </description>
 
+  <!--
+    Parked: built only under the "parked" profile and never published. See the parent POM.
+  -->
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.keycloak</groupId>

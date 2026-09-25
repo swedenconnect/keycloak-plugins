@@ -14,6 +14,7 @@
 
   <name>Sweden Connect :: Keycloak :: Login Theme</name>
   <description>Keycloak login theme SwedenconnectIdpPsw. Lists the identity providers first, with the username and password form behind a last button.</description>
+  <url>https://github.com/swedenconnect/keycloak-plugins</url>
 
   <!--
     A theme JAR holds resources only: META-INF/keycloak-themes.json, which Keycloak reads to find the
@@ -36,4 +37,35 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      The module carries no Java code, so maven-javadoc-plugin produces nothing. Maven Central
+      still requires a javadoc jar next to every published artifact, so an empty one is attached.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>empty-javadoc-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <classifier>javadoc</classifier>
+                  <classesDirectory>${project.build.directory}/empty-javadoc</classesDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
