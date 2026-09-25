@@ -14,6 +14,10 @@ Releases made before this file was introduced are not listed here. See the
 **Date:** <ToBeSet>
 - New Features 
 
+- **The plugins are published to Maven Central.** The build gained a `release` profile that
+  attaches sources and javadoc jars, signs the artifacts and uploads them. `tools` and
+  `integration-tests` are not published. See [releasing.md](releasing.md).
+
 ---
 ### Version 0.6.0
 

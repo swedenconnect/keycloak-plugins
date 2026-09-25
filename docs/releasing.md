@@ -56,22 +56,67 @@ pass, is planned; see [Future work](#future-work).
 2. Update [release-notes.md](release-notes.md): give the version its `**Date:**` and describe the
    changes. Call out anything a consumer must act on under a bold **Upgrade action required.**
 
-3. Update the version badge in [README.md](../README.md).
-
-4. Verify both build paths, including the integration tests, which need a running Docker daemon:
+3. Verify both build paths, including the integration tests, which need a running Docker daemon:
 
    ```bash
    mvn clean install
    mvn -Pparked verify
    ```
 
-5. Commit, then tag the commit on `main` per the rules above, and push both:
+4. Commit, then tag the commit on `main` per the rules above, and push both:
 
    ```bash
    git push origin main && git push origin v<version>
    ```
 
+   Pushing the tag triggers
+   [github-release.yml](../.github/workflows/github-release.yml), which creates the GitHub release
+   pointing at the release notes. It attaches no assets and builds nothing.
+
+5. Publish to Maven Central from the tagged commit:
+
+   ```bash
+   mvn -Prelease clean deploy
+   ```
+
+   See [Publishing to Maven Central](#publishing-to-maven-central) for what the profile does and
+   what has to be in place first.
+
 6. Open the next development version as `<next>-SNAPSHOT` on `main`.
+
+<a name="publishing-to-maven-central"></a>
+## Publishing to Maven Central
+
+The `release` profile in the parent POM attaches the sources and javadoc jars Central requires,
+signs every artifact with GPG, and uploads the bundle through the Sonatype Central publishing
+plugin. `autoPublish` is on, so a bundle that passes validation goes live without a manual step in
+the Central portal.
+
+Two things must be set up on the machine doing the release:
+
+1. **A Central portal token**, as a server with id `central` in `~/.m2/settings.xml`:
+
+   ```xml
+   <server>
+     <id>central</id>
+     <username><!-- token username --></username>
+     <password><!-- token password --></password>
+   </server>
+   ```
+
+2. **A published GPG key.** The key must be available to `gpg` on the machine and its public half
+   uploaded to a keyserver Central checks, otherwise validation rejects the bundle.
+
+Not everything in the reactor is published. `tools` holds example clients and `integration-tests`
+produces an empty jar, so both set `maven.deploy.skip`. The parked modules do the same, so that a
+`-Pparked -Prelease deploy` cannot push them by mistake.
+
+Central is immutable. A version that has been published cannot be altered or withdrawn, so verify
+the build before running `deploy`:
+
+```bash
+mvn -Prelease -Dgpg.skip=true clean verify
+```
 
 ## Versioning
 
@@ -102,14 +147,10 @@ provider IDs.
 <a name="future-work"></a>
 ## Future work
 
-- **Publishing to Maven Central.** Requires the POM metadata Central mandates (`name`,
-  `description`, `licenses`, `developers`, `scm` and a real `url`) plus a `release` profile
-  carrying the Central publishing, GPG signing, source and javadoc plugins. Needs the signing key,
-  so it is maintainer work.
-
-- **Publishing from a tag.** Once the above is in place, a GitHub Actions workflow triggered on
-  `v*` tags can run the build and tests and publish only on success, replacing the manual
-  `deploy` step above.
+- **Publishing to Central from a tag.** The `v*` tag already creates the GitHub release. A second
+  workflow on the same trigger could run the build and tests and publish to Central only on
+  success, replacing the manual `deploy` step above. It needs the Central token and the signing
+  key as repository secrets.
 
 - **Enforcing the tagging rules.** A GitHub tag ruleset restricting who may create refs matching
   `v*` would make rule 1 and the maintainer restriction real rather than advisory.

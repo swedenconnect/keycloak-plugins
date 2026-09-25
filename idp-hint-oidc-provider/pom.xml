@@ -16,6 +16,13 @@
     click URL to the upstream realm's authorization request, enabling single-page IdP selection
     across a two-realm brokering chain.</description>
 
+  <!--
+    Parked: built only under the "parked" profile and never published. See the parent POM.
+  -->
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.keycloak</groupId>
