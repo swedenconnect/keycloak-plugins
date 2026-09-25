@@ -3,16 +3,19 @@
 # Keycloak Plugins - Release Notes
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![Version](https://img.shields.io/badge/Version-_0.5.0-yellow)
-
-Releases made before this file was introduced are not listed here. See the
-[repository tags](https://github.com/swedenconnect/keycloak-plugins/tags) for their history.
+![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.keycloak/keycloak-plugins-parent.svg)
 
 ---
+
+### Version 0.7.1
+
+**Date:** _not yet released_
+
+-
+
 ### Version 0.7.0
 
-**Date:** <ToBeSet>
-- New Features 
+**Date:** 2026-09-25
 
 - **The plugins are published to Maven Central.** The build gained a `release` profile that
   attaches sources and javadoc jars, signs the artifacts and uploads them. `tools` and
@@ -22,7 +25,8 @@ Releases made before this file was introduced are not listed here. See the
 ### Version 0.6.0
 
 **Date:** 2026-09-24
-- ** Three new login theme for Swedenconnect and Digg **
+
+- **Three new login themes for Sweden Connect and Digg**
 
 - **`idp-hint-oidc-provider` and `saml-session-note-mapper` are parked.** Neither is built by the
   default reactor and neither is released. The code stays in the repository until a new home is
