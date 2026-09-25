@@ -7,6 +7,12 @@
 
 ---
 
+### Version 0.7.1
+
+**Date:** _not yet released_
+
+-
+
 ### Version 0.7.0
 
 **Date:** 2026-09-25
