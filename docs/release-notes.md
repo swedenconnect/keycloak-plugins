@@ -11,7 +11,8 @@
 
 **Date:** _not yet released_
 
--
+- DiggDS theme with Digg style, no psw entry
+- DiggDSPsw theme with Digg style and user/psw
 
 ### Version 0.7.0
 

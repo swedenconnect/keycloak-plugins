@@ -17,6 +17,12 @@
       "types": [
         "login"
       ]
+    },
+    {
+      "name": "DiggDSPsw",
+      "types": [
+        "login"
+      ]
     }
   ]
 }
