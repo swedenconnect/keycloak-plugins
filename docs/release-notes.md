@@ -23,7 +23,7 @@
   `integration-tests` are not published. See [releasing.md](releasing.md).
 
 ---
-### Version 0.6.0
+### Version 0.6.0ª
 
 **Date:** 2026-09-24
 
