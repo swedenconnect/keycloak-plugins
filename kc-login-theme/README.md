@@ -4,62 +4,49 @@
 
 Two Keycloak 26.x login themes, packaged as a single provider JAR:
 
-- **`DiggDs`** is identity-provider selection only, no username/password form, styled after DIGG's
-  own discovery service at <https://iam.digg.se/ds> (a muted green-grey card per provider), with
-  DIGG's own logo in the header.
-- **`DiggDSPsw`** is `DiggDs`'s look and icons, but with the identity providers first and the
-  username/password form folded behind a last toggle card.
+- **`DiggDs`**
+- **`DiggDSPsw`**
 
-Both extend the stock `keycloak.v2` login theme and override only what differs. Every other page,
-such as password reset and OTP, comes from `keycloak.v2` and takes its colours and typeface from
-the stylesheet of the theme in use.
+Both are styled after DIGG's own discovery service at <https://iam.digg.se/ds> and have the same
+page structure (see below); they are kept as two separate theme names so a realm can be pointed at
+either one under **Realm settings** → **Themes**, and so the two can diverge again later without
+disturbing whichever realms already use one of them. Both extend the stock `keycloak.v2` login
+theme and override only what differs. Every other page, such as password reset and OTP, comes from
+`keycloak.v2` and takes its colours and typeface from the stylesheet of the theme in use.
 
-`DiggDs` and `DiggDSPsw` share the same alias-to-icon matching (see below); pick whichever layout
-(with or without a password form) fits the realm.
+Dark mode is turned off in both, since the discovery service has no dark variant.
 
-## DiggDs
+## Page structure
 
-The login page (`login.ftl`) is only the list of identity providers, as cards; there is no
-username/password form, regardless of whether the realm allows one. Colours (the muted green card
-background, `#5a6751` accent), the card layout and the Ubuntu typeface follow DIGG's discovery
-service at <https://iam.digg.se/ds>. The header shows **DIGG's own logo and favicon**, taken from
-<https://www.digg.se>, sized the same as on the discovery service (35px). Each card also shows a
-brand icon; see **Identity-provider icons** below.
+The login page (`login.ftl`) splits the realm's configured identity providers into two groups by
+**alias** (case-insensitive substring match):
 
-Dark mode is turned off, since the discovery service has no dark variant.
-
-## DiggDSPsw
-
-The login page (`login.ftl`) lists the identity providers first, as DIGG-style cards (same as
-`DiggDs`, including the brand icons). The last item, labelled **Username/Password**, is a card that
-unfolds the username and password form — a native HTML `details` element, open from the start when
-the realm has no identity provider or after a failed login. Colours, typeface and the header
-(DIGG's own logo and favicon) are the same as `DiggDs`.
-
-Dark mode is turned off, since the discovery service has no dark variant.
-
-## Identity-provider icons
-
-Both themes show a brand icon per identity provider, chosen by matching the provider's **alias** in
-the Admin Console against a fixed set of substrings (case-insensitive), in `idpIconFile()` in each
-theme's `login.ftl`:
-
-| Alias contains | Icon |
+| Alias contains | Group |
 | :--- | :--- |
-| `bankid` | `img/idp/bankid.svg` |
-| `siths` | `img/idp/siths.svg` |
-| `efos` | `img/idp/efos.png` |
-| `freja` | `img/idp/freja.svg` |
-| `eidas` or `foreign` | `img/idp/foreign-eid.svg` |
-| (no match) | `img/idp/default.svg` |
+| `siths`, `efos` or `frejaorg` | e-service credential |
+| anything else | personal e-identification |
 
-An alias that matches none of the named patterns falls back to a generic icon, so a newly added
-identity provider never breaks the page; add a pattern and drop the matching icon into
-`resources/img/idp/` to give it a real one. `bankid.svg`, `siths.svg`, `efos.png`, `freja.svg` and
-`foreign-eid.svg` are each provider's own official logo, taken from the same URLs DIGG's discovery
-service (<https://iam.digg.se/ds>) itself serves them from; `default.svg` is a generic placeholder
-mark, not any provider's logo. The two themes keep separate, identical copies of the icon files,
-since Keycloak resource directories are not shared between themes.
+- **Personal e-identification** (e.g. BankID, foreign eID) is listed directly at the top, as plain
+  text buttons — no provider logos are shown.
+- **`E-tjänste legitimation`** is a badge that only appears when the realm has at least one
+  e-service-credential provider configured. Clicking it expands the list of those providers, in the
+  same text-only style as the personal list above.
+- **`Användarnamn Lösenord`** is a second badge, shown whenever the realm allows password login
+  (`realm.password`). Clicking it expands the username/password form. If the realm has *no*
+  identity providers configured at all (neither group), the form is shown directly instead, with no
+  badge to unfold. The badge opens automatically after a failed username/password login, so the
+  error is never hidden behind a closed badge.
+
+Both badges are native HTML `<details>` elements, so they need no JavaScript and are operable from
+the keyboard.
+
+## Identity-provider grouping
+
+The alias patterns for the `E-tjänste legitimation` badge are matched in `isServiceIdp()` in each
+theme's `login.ftl`. An alias that matches none of them is treated as personal e-identification, so
+a newly added identity provider always appears somewhere on the page. Note that a plain `freja`
+alias (personal Freja eID) is **not** matched — only `frejaorg` (Freja eID for organisations) counts
+as an e-service credential.
 
 ## Contents
 
@@ -68,18 +55,13 @@ Everything is under `src/main/resources/`.
 | File | Purpose |
 | :--- | :--- |
 | `META-INF/keycloak-themes.json` | Tells Keycloak that the JAR holds the themes `DiggDs` and `DiggDSPsw`, both of type `login`. |
-| `theme/DiggDs/login/theme.properties` | Sets the parent theme `keycloak.v2`, turns off dark mode and adds the stylesheet. |
-| `theme/DiggDs/login/login.ftl` | The login page: identity-provider list only, with the alias-to-icon matching described above. |
-| `theme/DiggDs/login/resources/css/digg-ds.css` | Colours, typeface and the identity-provider card layout. |
-| `theme/DiggDs/login/resources/img/` | DIGG's own logo and favicon (header) and `img/idp/`, the bundled provider icons. |
-| `theme/DiggDs/login/resources/fonts/` | Ubuntu 400 and 700, latin and latin-ext. |
-| `theme/DiggDs/login/messages/messages_en.properties`, `messages_sv.properties` | The subtitle above the identity-provider list, `scSelectIdp`, and the page title, `loginAccountTitle`. |
-| `theme/DiggDSPsw/login/theme.properties` | Sets the parent theme `keycloak.v2`, turns off dark mode and adds the stylesheet. |
-| `theme/DiggDSPsw/login/login.ftl` | The login page: identity providers first (with the alias-to-icon matching), the password form behind the last toggle card. |
-| `theme/DiggDSPsw/login/resources/css/digg-ds-psw.css` | Colours, typeface, logo and card shapes, matching `DiggDs`, plus the password-toggle card and filled submit button. |
-| `theme/DiggDSPsw/login/resources/img/` | DIGG's own logo and favicon (header) and `img/idp/`, the bundled provider icons. |
-| `theme/DiggDSPsw/login/resources/fonts/` | Ubuntu 400 and 700, latin and latin-ext (a copy of the same files as `DiggDs`). |
-| `theme/DiggDSPsw/login/messages/messages_en.properties`, `messages_sv.properties` | The label of the toggle card, `scUsernamePassword`, and the page title, `loginAccountTitle`. |
+| `theme/<name>/login/theme.properties` | Sets the parent theme `keycloak.v2`, turns off dark mode, sets `locales=sv,en` and adds the stylesheet. |
+| `theme/<name>/login/login.ftl` | The login page: personal identity providers, the `E-tjänste legitimation` badge and the `Användarnamn Lösenord` badge, as described above. |
+| `theme/DiggDs/login/resources/css/digg-ds.css` | Colours, typeface and the selection-block/badge layout. |
+| `theme/DiggDSPsw/login/resources/css/digg-ds-psw.css` | The same layout, kept in step with `digg-ds.css` by hand. |
+| `theme/<name>/login/resources/img/` | DIGG's own logo and favicon, shown in the page header. |
+| `theme/<name>/login/resources/fonts/` | Ubuntu 400 and 700, latin and latin-ext (separate copies per theme; Keycloak resource directories are not shared between themes). |
+| `theme/<name>/login/messages/messages_en.properties`, `messages_sv.properties` | The page title (`loginAccountTitle`), the subtitle above the personal list (`scSelectIdp`), and the two badge labels (`scServiceIdp`, `scUsernamePassword`). |
 
 Theme names have no space, because Keycloak uses them as directory names.
 
@@ -126,7 +108,8 @@ requires Swedish and English to both be enabled for the realm, under **Realm set
 **Localization**.
 
 The identity providers must already be configured under **Identity providers**; aliases that match
-the patterns in `idpIconFile()` (see above) get their real icon, others get the generic fallback.
+`siths`, `efos` or `frejaorg` land in the `E-tjänste legitimation` badge, everything else is listed
+at the top (see **Identity-provider grouping** above).
 
 ## Changing the look
 
@@ -134,10 +117,9 @@ the patterns in `idpIconFile()` (see above) get their real icon, others get the 
 
 - **Colours, typeface and logo:** edit the design tokens at the top of `digg-ds.css` (`DiggDs`) or
   `digg-ds-psw.css` (`DiggDSPsw`, kept in step with `digg-ds.css` by hand).
-- **Which alias gets which icon:** edit `idpIconFile()` in the theme's `login.ftl`; drop the icon file
-  itself into `resources/img/idp/` (see **Identity-provider icons** above).
-- **The subtitle above the list (`DiggDs`) or the toggle card label (`DiggDSPsw`):** edit the
-  `scSelectIdp` or `scUsernamePassword` key in the theme's `messages` files.
+- **Which alias counts as an e-service credential:** edit `isServiceIdp()` in the theme's `login.ftl`.
+- **The subtitle above the list, or the two badge labels:** edit the `scSelectIdp`, `scServiceIdp` or
+  `scUsernamePassword` key in the theme's `messages` files.
 - **The layout of the login page:** edit `login.ftl`.
 
 Any change means a rebuild. For quick iteration on the CSS, a copy of the theme directory can be
@@ -149,12 +131,11 @@ themes with the same name conflict.
 ## A note on stability
 
 Each `login.ftl` is a copy of the `login.ftl` of `keycloak.v2`, with the changes described above.
-`DiggDSPsw` relies on the macros and variables of that theme (`template.ftl`, `field.ftl`,
-`buttons.ftl` and `passkeys.ftl`), since it has a password form to submit; `DiggDs` relies only on
-`template.ftl`, since it does not. Keycloak does not treat any of these as a stable API. Both themes
-were written against the `keycloak.v2` login theme of Keycloak 26.7.3, the version the Compose file
-runs. On every Keycloak upgrade, compare each `login.ftl` with the `login.ftl` of the new
-`keycloak.v2` theme and bring over what has changed.
+Both themes rely on the macros and variables of that theme (`template.ftl`, `field.ftl`,
+`buttons.ftl` and `passkeys.ftl`), since both have a password form to submit. Keycloak does not
+treat any of these as a stable API. Both themes were written against the `keycloak.v2` login theme
+of Keycloak 26.7.3, the version the Compose file runs. On every Keycloak upgrade, compare each
+`login.ftl` with the `login.ftl` of the new `keycloak.v2` theme and bring over what has changed.
 
 ---
 

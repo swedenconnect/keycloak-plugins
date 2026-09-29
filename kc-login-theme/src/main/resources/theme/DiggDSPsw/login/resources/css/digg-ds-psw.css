@@ -53,6 +53,9 @@
  * ------------------------------------------------------------------ */
 
 :root {
+  /* These match DIGG's own published design tokens byte for byte: --color-digg-black-100,
+     --color-digg-green-100, --color-digg-green-hover, --color-digg-black-10 and
+     --color-digg-green-10, respectively. */
   --ds-text: #292a2b;
   --ds-outline: #2b2a29;
 
@@ -63,9 +66,6 @@
   --ds-bg-frame: #f3f3f3;
   --ds-border: #e8e8e8;
   --ds-terracotta: #cd7a6e;
-
-  --ds-block-bg: #d6d9d3;
-  --ds-block-bg-hover: #e5e9e2;
 
   --ds-font-family: "Ubuntu", "Helvetica Neue", Arial, sans-serif;
   --ds-border-width: 2px;
@@ -109,20 +109,22 @@ body#keycloak-bg {
 }
 
 #kc-header-wrapper {
-  /* The stock rule paints the realm name white, on a dark banner. The name stays in the markup for
-     screen readers; the logo is drawn behind it. */
+  /* DIGG's logo is drawn as this element's own background image. The realm name text that
+     keycloak.v2 renders inside stays in the markup for screen readers, but is pushed off-screen
+     with text-indent rather than hidden by zeroing its font-size, which some screen reader/browser
+     combinations skip over entirely. text-indent hides whatever text keycloak.v2 puts in here
+     regardless of the exact markup, unlike a clip technique scoped to one specific child element. */
   height: var(--ds-logo-height);
   max-width: 260px;
   margin: 0 auto;
-  font-size: 0;
-  line-height: 0;
-  color: transparent !important;
+  overflow: hidden;
+  text-indent: -9999px;
+  white-space: nowrap;
   background: url("../img/digg-logo.svg") no-repeat center / contain;
 }
 
 #kc-header-wrapper .kc-logo-text {
   background-image: none;
-  height: 0;
 }
 
 .pf-v5-c-login__header {
@@ -164,14 +166,19 @@ summary:focus-visible {
 }
 
 /* ------------------------------------------------------------------ *
- * Identity provider list, then the unfoldable username/password card
+ * Identity provider list, then the toggle badges (e-service credentials, username/password)
  * ------------------------------------------------------------------ */
+
+.ds-subtitle {
+  margin: 0 0 1rem;
+  color: var(--ds-text);
+}
 
 .ds-idp-list {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  margin: 0 0 0.625rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -179,66 +186,80 @@ summary:focus-visible {
 .ds-selection-block {
   display: flex;
   align-items: center;
+  justify-content: center;
   min-height: 4.6875rem;
-  background: var(--ds-block-bg);
+  padding: 0 1.25rem;
+  background: var(--ds-accent);
+  border: var(--ds-border-width) solid var(--ds-accent);
   border-radius: 2px;
   text-decoration: none;
   cursor: pointer;
 }
 
 .ds-selection-block:hover {
-  background: var(--ds-block-bg-hover);
-}
-
-.ds-selection-logo {
-  height: 3.4375rem;
-  width: 3.4375rem;
-  padding: 0.5rem;
-  flex-shrink: 0;
+  background: var(--ds-accent-light);
+  border-color: var(--ds-accent-light);
 }
 
 .ds-selection-title {
-  margin-left: 0.625rem;
-  color: var(--ds-text);
-  font-size: 1rem;
+  color: var(--ds-bg);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  text-align: center;
 }
 
-.ds-password-login summary {
+.ds-toggle-card {
+  margin-top: 0.625rem;
+  border: var(--ds-border-width) solid var(--ds-accent);
+  border-radius: 2px;
+}
+
+.ds-toggle-card summary {
   list-style: none;
 }
 
-.ds-password-login summary::-webkit-details-marker {
+.ds-toggle-card summary::-webkit-details-marker {
   display: none;
 }
 
-.ds-password-toggle {
+/* The summary is already framed by .ds-toggle-card, so it does not need its own border. */
+.ds-toggle-card > summary.ds-selection-block {
+  border: none;
+}
+
+.ds-toggle-summary {
   justify-content: space-between;
   padding-right: 1.25rem;
 }
 
-/* Chevron that turns when the form is open. */
-.ds-password-toggle::after {
+/* Chevron that turns when the badge is open. */
+.ds-toggle-summary::after {
   content: "";
   width: 0.5rem;
   height: 0.5rem;
   margin-left: 0.75rem;
-  border-right: 2px solid var(--ds-text);
-  border-bottom: 2px solid var(--ds-text);
+  border-right: 2px solid var(--ds-bg);
+  border-bottom: 2px solid var(--ds-bg);
   transform: rotate(45deg) translateY(-2px);
   transition: transform 0.15s ease;
   flex-shrink: 0;
 }
 
-.ds-password-login[open] .ds-password-toggle::after {
+.ds-toggle-card[open] .ds-toggle-summary::after {
   transform: rotate(-135deg) translateY(-2px);
 }
 
-.ds-password-login-body {
+.ds-toggle-body {
   margin-top: 1rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.ds-password-section {
+  margin-top: 0.625rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-password-toggle::after {
+  .ds-toggle-summary::after {
     transition: none;
   }
 }
