@@ -53,42 +53,52 @@
  * ------------------------------------------------------------------ */
 
 :root {
-  /* These match DIGG's own published design tokens byte for byte: --color-digg-black-100,
-     --color-digg-green-100, --color-digg-green-hover, --color-digg-black-10 and
-     --color-digg-green-10, respectively. */
-  --ds-text: #292a2b;
+  /* --ds-text, --ds-accent/--ds-accent-hover and the title/tab/button metrics below (font size,
+     weight, radius, shadow) are taken from a reference design's actual rendered page (read with
+     getComputedStyle — a Material-UI app), not from DIGG's published design tokens: --ds-text
+     (#212121) is MUI's default text.primary (rgba(0,0,0,.87) composited on white), and the
+     reference's green (#556951) is close to but not identical to --color-digg-green-100
+     (#5A6751). The goal here is to match that specific reference exactly. */
+  --ds-text: #212121;
   --ds-outline: #2b2a29;
 
-  --ds-accent: #5a6751;
-  --ds-accent-light: #657c54;
+  --ds-accent: #556951;
+  --ds-accent-hover: #3b4938;
 
   --ds-bg: #ffffff;
   --ds-bg-frame: #f3f3f3;
   --ds-border: #e8e8e8;
   --ds-terracotta: #cd7a6e;
 
+  --ds-button-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  --ds-button-shadow-hover: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
+
   --ds-font-family: "Ubuntu", "Helvetica Neue", Arial, sans-serif;
   --ds-border-width: 2px;
   --ds-logo-height: 35px;
 
   /* Repoint the PatternFly and keycloak.v2 variables at the DIGG DS values, so that everything the
-     theme does not restyle by name (inputs, links, alerts) follows along. */
+     theme does not restyle by name (inputs, links, alerts) follows along. --keycloak-card-top-color
+     paints keycloak.v2's own accent bar above the login card — set to transparent, not the accent
+     colour, so that bar does not reappear now that this theme's own top border is removed. */
   --keycloak-bg-logo-url: none;
-  --keycloak-card-top-color: var(--ds-accent);
+  --keycloak-card-top-color: transparent;
 
   --pf-v5-global--FontFamily--text: var(--ds-font-family);
   --pf-v5-global--FontFamily--heading: var(--ds-font-family);
   --pf-v5-global--FontFamily--sans-serif: var(--ds-font-family);
   --pf-v5-global--primary-color--100: var(--ds-accent);
-  --pf-v5-global--primary-color--200: var(--ds-accent-light);
+  --pf-v5-global--primary-color--200: var(--ds-accent-hover);
   --pf-v5-global--link--Color: var(--ds-text);
-  --pf-v5-global--link--Color--hover: var(--ds-accent-light);
+  --pf-v5-global--link--Color--hover: var(--ds-accent-hover);
   --pf-v5-global--active-color--100: var(--ds-accent);
   --pf-v5-global--BorderRadius--sm: 2px;
 }
 
 /* ------------------------------------------------------------------ *
- * Page: light frame, white card, DIGG's own logo above it instead of the Keycloak banner
+ * Page: light frame, white card. The DIGG logo and the language switcher now live in
+ * .ds-card-topbar, inside the card itself (see further down) rather than in the Keycloak banner
+ * above it, so the stock banner (.pf-v5-c-login__header / #kc-header-wrapper) is hidden visually.
  * ------------------------------------------------------------------ */
 
 html,
@@ -108,45 +118,92 @@ body#keycloak-bg {
   background-image: none;
 }
 
-#kc-header-wrapper {
-  /* DIGG's logo is drawn as this element's own background image. The realm name text that
-     keycloak.v2 renders inside stays in the markup for screen readers, but is pushed off-screen
-     with text-indent rather than hidden by zeroing its font-size, which some screen reader/browser
-     combinations skip over entirely. text-indent hides whatever text keycloak.v2 puts in here
-     regardless of the exact markup, unlike a clip technique scoped to one specific child element. */
-  height: var(--ds-logo-height);
-  max-width: 260px;
-  margin: 0 auto;
-  overflow: hidden;
-  text-indent: -9999px;
-  white-space: nowrap;
-  background: url("../img/digg-logo.svg") no-repeat center / contain;
-}
-
-#kc-header-wrapper .kc-logo-text {
-  background-image: none;
-}
-
+/* Visually hidden, not display:none: the realm name keycloak.v2 renders in here stays available
+   to screen readers, it just no longer takes up visible space now that .ds-card-topbar carries
+   the logo instead. */
 .pf-v5-c-login__header {
-  padding-bottom: 1.5rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
+
+/* keycloak.v2's own built-in language switcher (inherited from the base theme, not something this
+   theme's login.ftl renders): a <select id="login-select-toggle"> inside
+   .pf-v5-c-login__main-header-utilities, confirmed from the actual rendered page. Redundant now
+   that the globe link in .ds-card-topbar does the same job, and carries no unique content worth
+   keeping for screen readers, so it is fully hidden rather than just visually hidden. */
+.pf-v5-c-login__main-header-utilities {
+  display: none;
 }
 
 .pf-v5-c-login__main {
   background-color: var(--ds-bg);
   border: var(--ds-border-width) solid var(--ds-border);
-  border-radius: 2px;
+  border-radius: 4px;
   box-shadow: none;
 }
 
+/* keycloak.v2 lays this out as a flex row (title left, language utilities right) by default, which
+   left-aligns the title once the utilities are hidden above. Force a centred column instead, so
+   .ds-card-topbar and the title both sit centred regardless of the base theme's own layout. */
 .pf-v5-c-login__main-header {
-  border-top: 4px solid var(--ds-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .pf-v5-c-title,
 #kc-page-title {
   color: var(--ds-text);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.5rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Card top bar: the language switcher and the DIGG logo, inside the card itself, rendered by
+ * login.ftl's own header section since the inherited Keycloak banner cannot be moved into the
+ * card by CSS alone.
+ * ------------------------------------------------------------------ */
+
+.ds-card-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ds-card-logo {
+  height: var(--ds-logo-height);
+  width: auto;
+}
+
+/* A single link, not a dropdown: login.ftl resolves the one other configured locale and the globe
+   links straight to it. Covered by the shared a:focus-visible rule below, since it is a plain
+   <a>. */
+.ds-lang-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--ds-text);
+  text-decoration: none;
+}
+
+.ds-lang-toggle:hover {
+  background: var(--ds-bg-frame);
+}
+
+.ds-lang-icon {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* ------------------------------------------------------------------ *
@@ -166,18 +223,71 @@ summary:focus-visible {
 }
 
 /* ------------------------------------------------------------------ *
- * Identity provider list, then the toggle badges (e-service credentials, username/password)
+ * Tabs: "Legitimering" / "Tjänstelegitimation", built with the hidden-radio + <label> technique
+ * (no JavaScript). Only the tab(s) that actually have providers are rendered by login.ftl; if
+ * just one is, it still renders as a single (permanently active) tab for a consistent look.
  * ------------------------------------------------------------------ */
 
-.ds-subtitle {
-  margin: 0 0 1rem;
-  color: var(--ds-text);
+.ds-tabs {
+  margin-top: 0.625rem;
 }
+
+.ds-tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.ds-tab-labels {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 0 1rem;
+  border-bottom: var(--ds-border-width) solid var(--ds-border);
+}
+
+.ds-tab-label {
+  padding-bottom: 0.625rem;
+  margin-bottom: calc(var(--ds-border-width) * -1);
+  color: var(--ds-text);
+  font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.7;
+  cursor: pointer;
+  border-bottom: var(--ds-border-width) solid transparent;
+}
+
+#ds-tab-legitimering:checked ~ .ds-tab-labels label[for="ds-tab-legitimering"],
+#ds-tab-tjanstelegitimation:checked ~ .ds-tab-labels label[for="ds-tab-tjanstelegitimation"] {
+  opacity: 1;
+  border-bottom-color: var(--ds-accent);
+}
+
+#ds-tab-legitimering:focus-visible ~ .ds-tab-labels label[for="ds-tab-legitimering"],
+#ds-tab-tjanstelegitimation:focus-visible ~ .ds-tab-labels label[for="ds-tab-tjanstelegitimation"] {
+  outline: 3px dotted var(--ds-outline);
+  outline-offset: 3px;
+}
+
+.ds-tab-panel {
+  display: none;
+}
+
+#ds-tab-legitimering:checked ~ #ds-panel-legitimering,
+#ds-tab-tjanstelegitimation:checked ~ #ds-panel-tjanstelegitimation {
+  display: block;
+}
+
+/* ------------------------------------------------------------------ *
+ * Identity provider list, then the toggle badge (username/password)
+ * ------------------------------------------------------------------ */
 
 .ds-idp-list {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -187,31 +297,30 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 4.6875rem;
-  padding: 0 1.25rem;
+  padding: 0.375rem 1rem;
   background: var(--ds-accent);
-  border: var(--ds-border-width) solid var(--ds-accent);
-  border-radius: 2px;
+  border: none;
+  border-radius: 4px;
+  box-shadow: var(--ds-button-shadow);
   text-decoration: none;
   cursor: pointer;
 }
 
 .ds-selection-block:hover {
-  background: var(--ds-accent-light);
-  border-color: var(--ds-accent-light);
+  background: var(--ds-accent-hover);
+  box-shadow: var(--ds-button-shadow-hover);
 }
 
 .ds-selection-title {
   color: var(--ds-bg);
-  font-size: 1.1875rem;
-  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1.75;
+  font-weight: 500;
   text-align: center;
 }
 
 .ds-toggle-card {
   margin-top: 0.625rem;
-  border: var(--ds-border-width) solid var(--ds-accent);
-  border-radius: 2px;
 }
 
 .ds-toggle-card summary {
@@ -222,15 +331,8 @@ summary:focus-visible {
   display: none;
 }
 
-/* The summary is already framed by .ds-toggle-card, so it does not need its own border. */
-.ds-toggle-card > summary.ds-selection-block {
-  border: none;
-}
-
-.ds-toggle-summary {
-  justify-content: space-between;
-  padding-right: 1.25rem;
-}
+/* No justify-content override: the title is centred like every other button (.ds-selection-block),
+   with the chevron riding along next to it instead of pinned to the right edge. */
 
 /* Chevron that turns when the badge is open. */
 .ds-toggle-summary::after {
@@ -267,11 +369,19 @@ summary:focus-visible {
 .pf-v5-c-button.pf-m-primary {
   --pf-v5-c-button--m-primary--BackgroundColor: var(--ds-accent);
   --pf-v5-c-button--m-primary--Color: #fff;
-  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ds-accent-light);
-  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ds-accent-light);
-  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ds-accent-light);
-  --pf-v5-c-button--BorderRadius: 2px;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ds-accent-hover);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ds-accent-hover);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ds-accent-hover);
+  --pf-v5-c-button--BorderRadius: 4px;
   font-family: var(--ds-font-family);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.375rem 1rem;
+  box-shadow: var(--ds-button-shadow);
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+  box-shadow: var(--ds-button-shadow-hover);
 }
 
 /* ------------------------------------------------------------------ *
