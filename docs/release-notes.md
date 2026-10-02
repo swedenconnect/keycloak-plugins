@@ -11,7 +11,8 @@
 
 **Date:** _not yet released_
 
--
+- DiggDS theme with Digg style, no psw entry
+- DiggDSPsw theme with Digg style and user/psw
 
 ### Version 0.7.0
 
@@ -22,7 +23,7 @@
   `integration-tests` are not published. See [releasing.md](releasing.md).
 
 ---
-### Version 0.6.0
+### Version 0.6.0ª
 
 **Date:** 2026-09-24
 

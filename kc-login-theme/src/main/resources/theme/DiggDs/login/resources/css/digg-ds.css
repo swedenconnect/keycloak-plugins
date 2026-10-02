@@ -1,0 +1,326 @@
+/*
+ * DIGG discovery-service style login theme.
+ *
+ * Colours, typeface and the identity-provider block layout follow DIGG's own discovery service at
+ * https://iam.digg.se/ds (see ds/ds.css there); the header logo is DIGG's own, from
+ * https://www.digg.se, sized the same as on that discovery service (35px). Loaded after the
+ * keycloak.v2 stylesheet, and overrides it.
+ */
+
+/* ------------------------------------------------------------------ *
+ * Typeface: Ubuntu, 400 and 700, served from this theme
+ * ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/ubuntu-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/ubuntu-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/ubuntu-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/ubuntu-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ------------------------------------------------------------------ *
+ * Design tokens
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* --ds-text, --ds-accent/--ds-accent-hover and the title/tab/button metrics below (font size,
+     weight, radius, shadow) are taken from a reference design's actual rendered page (read with
+     getComputedStyle — a Material-UI app), not from DIGG's published design tokens: --ds-text
+     (#212121) is MUI's default text.primary (rgba(0,0,0,.87) composited on white), and the
+     reference's green (#556951) is close to but not identical to --color-digg-green-100
+     (#5A6751). The goal here is to match that specific reference exactly. */
+  --ds-text: #212121;
+  --ds-outline: #2b2a29;
+
+  --ds-accent: #556951;
+  --ds-accent-hover: #3b4938;
+
+  --ds-bg: #ffffff;
+  --ds-bg-frame: #f3f3f3;
+  --ds-border: #e8e8e8;
+
+  --ds-button-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  --ds-button-shadow-hover: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
+
+  --ds-font-family: "Ubuntu", "Helvetica Neue", Arial, sans-serif;
+  --ds-border-width: 2px;
+  --ds-logo-height: 35px;
+
+  /* Repoint the PatternFly and keycloak.v2 variables at the DIGG DS values, so that everything the
+     theme does not restyle by name (inputs, links, alerts) follows along. --keycloak-card-top-color
+     paints keycloak.v2's own accent bar above the login card — set to transparent, not the accent
+     colour, so that bar does not reappear now that this theme's own top border is removed. */
+  --keycloak-bg-logo-url: none;
+  --keycloak-card-top-color: transparent;
+
+  --pf-v5-global--FontFamily--text: var(--ds-font-family);
+  --pf-v5-global--FontFamily--heading: var(--ds-font-family);
+  --pf-v5-global--FontFamily--sans-serif: var(--ds-font-family);
+  --pf-v5-global--primary-color--100: var(--ds-accent);
+  --pf-v5-global--primary-color--200: var(--ds-accent-hover);
+  --pf-v5-global--link--Color: var(--ds-text);
+  --pf-v5-global--link--Color--hover: var(--ds-accent-hover);
+  --pf-v5-global--active-color--100: var(--ds-accent);
+  --pf-v5-global--BorderRadius--sm: 2px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Page: light frame, white card. The DIGG logo and the language switcher now live in
+ * .ds-card-topbar, inside the card itself (see further down) rather than in the Keycloak banner
+ * above it, so the stock banner (.pf-v5-c-login__header / #kc-header-wrapper) is hidden visually.
+ * ------------------------------------------------------------------ */
+
+html,
+body,
+body#keycloak-bg {
+  font-family: var(--ds-font-family);
+  color: var(--ds-text);
+}
+
+body#keycloak-bg {
+  background-color: var(--ds-bg-frame);
+  background-image: none;
+}
+
+.pf-v5-c-login {
+  --pf-v5-c-login--BackgroundColor: var(--ds-bg-frame);
+  background-image: none;
+}
+
+/* Visually hidden, not display:none: the realm name keycloak.v2 renders in here stays available
+   to screen readers, it just no longer takes up visible space now that .ds-card-topbar carries
+   the logo instead. */
+.pf-v5-c-login__header {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
+
+/* keycloak.v2's own built-in language switcher (inherited from the base theme, not something this
+   theme's login.ftl renders): a <select id="login-select-toggle"> inside
+   .pf-v5-c-login__main-header-utilities, confirmed from the actual rendered page. Redundant now
+   that the globe link in .ds-card-topbar does the same job, and carries no unique content worth
+   keeping for screen readers, so it is fully hidden rather than just visually hidden. */
+.pf-v5-c-login__main-header-utilities {
+  display: none;
+}
+
+.pf-v5-c-login__main {
+  background-color: var(--ds-bg);
+  border: var(--ds-border-width) solid var(--ds-border);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+/* keycloak.v2 lays this out as a flex row (title left, language utilities right) by default, which
+   left-aligns the title once the utilities are hidden above. Force a centred column instead, so
+   .ds-card-topbar and the title both sit centred regardless of the base theme's own layout. */
+.pf-v5-c-login__main-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pf-v5-c-title,
+#kc-page-title {
+  color: var(--ds-text);
+  font-size: 1.5rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Card top bar: the language switcher and the DIGG logo, inside the card itself, rendered by
+ * login.ftl's own header section since the inherited Keycloak banner cannot be moved into the
+ * card by CSS alone.
+ * ------------------------------------------------------------------ */
+
+.ds-card-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ds-card-logo {
+  height: var(--ds-logo-height);
+  width: auto;
+}
+
+/* A single link, not a dropdown: login.ftl resolves the one other configured locale and the globe
+   links straight to it. Covered by the shared a:focus-visible rule below, since it is a plain
+   <a>. */
+.ds-lang-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--ds-text);
+  text-decoration: none;
+}
+
+.ds-lang-toggle:hover {
+  background: var(--ds-bg-frame);
+}
+
+.ds-lang-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Focus indicator: the dotted outline is the most recognisable detail of the Sweden Connect design,
+ * kept here for consistency with the other themes in this module.
+ * ------------------------------------------------------------------ */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px dotted var(--ds-outline);
+  outline-offset: 3px;
+  box-shadow: none;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tabs: "Legitimering" / "Tjänstelegitimation", built with the hidden-radio + <label> technique
+ * (no JavaScript). Only the tab(s) that actually have providers are rendered by login.ftl; if
+ * just one is, it still renders as a single (permanently active) tab for a consistent look.
+ * ------------------------------------------------------------------ */
+
+.ds-tabs {
+  margin-top: 0.625rem;
+}
+
+.ds-tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.ds-tab-labels {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 0 1rem;
+  border-bottom: var(--ds-border-width) solid var(--ds-border);
+}
+
+.ds-tab-label {
+  padding-bottom: 0.625rem;
+  margin-bottom: calc(var(--ds-border-width) * -1);
+  color: var(--ds-text);
+  font-size: 1.25rem;
+  font-weight: 400;
+  opacity: 0.7;
+  cursor: pointer;
+  border-bottom: var(--ds-border-width) solid transparent;
+}
+
+#ds-tab-legitimering:checked ~ .ds-tab-labels label[for="ds-tab-legitimering"],
+#ds-tab-tjanstelegitimation:checked ~ .ds-tab-labels label[for="ds-tab-tjanstelegitimation"] {
+  opacity: 1;
+  border-bottom-color: var(--ds-accent);
+}
+
+#ds-tab-legitimering:focus-visible ~ .ds-tab-labels label[for="ds-tab-legitimering"],
+#ds-tab-tjanstelegitimation:focus-visible ~ .ds-tab-labels label[for="ds-tab-tjanstelegitimation"] {
+  outline: 3px dotted var(--ds-outline);
+  outline-offset: 3px;
+}
+
+.ds-tab-panel {
+  display: none;
+}
+
+#ds-tab-legitimering:checked ~ #ds-panel-legitimering,
+#ds-tab-tjanstelegitimation:checked ~ #ds-panel-tjanstelegitimation {
+  display: block;
+}
+
+/* ------------------------------------------------------------------ *
+ * Identity provider list
+ * ------------------------------------------------------------------ */
+
+.ds-idp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-selection-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem 1rem;
+  background: var(--ds-accent);
+  border: none;
+  border-radius: 4px;
+  box-shadow: var(--ds-button-shadow);
+  text-decoration: none;
+}
+
+.ds-selection-block:hover {
+  background: var(--ds-accent-hover);
+  box-shadow: var(--ds-button-shadow-hover);
+}
+
+.ds-selection-title {
+  color: var(--ds-bg);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * Messages
+ * ------------------------------------------------------------------ */
+
+.pf-v5-c-alert.pf-m-danger {
+  --pf-v5-c-alert--m-danger--BorderTopColor: #cd7a6e;
+  --pf-v5-c-alert--m-danger__icon--Color: #cd7a6e;
+  --pf-v5-c-alert--m-danger__title--Color: var(--ds-text);
+}
