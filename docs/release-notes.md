@@ -14,6 +14,7 @@
 - DiggDS theme with Digg style, no psw entry
 - DiggDSPsw theme with Digg style and user/psw
 - DIGG logo and language switcher shown on error pages in the Digg themes
+- Upgraded to Keycloak 26.8.1 ([#53](https://github.com/swedenconnect/keycloak-plugins/issues/53))
 
 ### Version 0.7.0
 

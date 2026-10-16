@@ -115,8 +115,9 @@ Each `login.ftl` and `template.ftl` is a copy of the corresponding file of `keyc
 changes described above. `DiggDSPsw` also relies on the macros of that theme (`field.ftl`,
 `buttons.ftl` and `passkeys.ftl`), since it has a password form to submit. `template.ftl` relies on
 the `locale` bean (`locale.currentLanguageTag`, `locale.supported[].languageTag`/`.url`) for the
-language switcher. Keycloak does not treat any of these as a stable API. Both themes were written
-against the `keycloak.v2` login theme of Keycloak 26.7.3, the version the Compose file runs. On
+language switcher. Keycloak does not treat any of these as a stable API. Both themes match the
+`keycloak.v2` login theme of Keycloak 26.8.1 (its `login.ftl` and `template.ftl` are unchanged
+since 26.7.3). On
 every Keycloak upgrade, compare each `login.ftl` and `template.ftl` with the same file of the new
 `keycloak.v2` theme and bring over what has changed.
 
