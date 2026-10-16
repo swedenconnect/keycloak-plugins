@@ -31,7 +31,8 @@ Everything is under `src/main/resources/`.
 | :--- | :--- |
 | `META-INF/keycloak-themes.json` | Tells Keycloak that the JAR holds the themes `DiggDs` and `DiggDSPsw`, both of type `login`. |
 | `theme/<name>/login/theme.properties` | Sets the parent theme `keycloak.v2`, turns off dark mode, sets `locales=sv,en` and adds the stylesheet. |
-| `theme/DiggDs/login/login.ftl` | The login page: card top bar (language switcher + logo) and the `Legitimering`/`Tjänstelegitimation` tabs. No password form. |
+| `theme/<name>/login/template.ftl` | The page frame for every page, including error pages: a copy of `keycloak.v2`'s `template.ftl` with the card top bar (language switcher + logo) inside the card. |
+| `theme/DiggDs/login/login.ftl` | The login page: the `Legitimering`/`Tjänstelegitimation` tabs. No password form. |
 | `theme/DiggDSPsw/login/login.ftl` | The same, plus the `Användarnamn Lösenord` badge and its password form. |
 | `theme/DiggDs/login/resources/css/digg-ds.css` | Colours, typeface, the top bar, the tabs and the button styling. |
 | `theme/DiggDSPsw/login/resources/css/digg-ds-psw.css` | The same, plus the password badge and the primary submit button, kept in step with `digg-ds.css` by hand. |
@@ -99,6 +100,7 @@ The identity providers must already be configured under **Identity providers**; 
 - **A tab label, or the password badge label:** edit the `scLegitimering`/`scServiceIdp` (both
   themes) or `scUsernamePassword` (`DiggDSPsw` only) key in the theme's `messages` files.
 - **The layout of the login page:** edit `login.ftl`.
+- **The logo, the language switcher or anything else shared by all pages:** edit `template.ftl`.
 
 Any change means a rebuild. For quick iteration against a real Keycloak instance, a copy of the
 theme directory can be mounted at
@@ -109,15 +111,14 @@ same name conflict.
 
 ## A note on stability
 
-Each `login.ftl` is a copy of the `login.ftl` of `keycloak.v2`, with the changes described above.
-`DiggDSPsw` relies on the macros and variables of that theme (`template.ftl`, `field.ftl`,
-`buttons.ftl` and `passkeys.ftl`), since it has a password form to submit; `DiggDs` relies only on
-`template.ftl`, since it does not. Both themes' `login.ftl` additionally rely on the `locale` bean
-(`locale.current`, `locale.supported[].label`/`.url`) for the language switcher — documented
-publicly by Keycloak, but likewise not vendored here to verify statically. Keycloak does not treat
-any of these as a stable API. Both themes were written against the `keycloak.v2` login theme of
-Keycloak 26.7.3, the version the Compose file runs. On every Keycloak upgrade, compare each
-`login.ftl` with the `login.ftl` of the new `keycloak.v2` theme and bring over what has changed.
+Each `login.ftl` and `template.ftl` is a copy of the corresponding file of `keycloak.v2`, with the
+changes described above. `DiggDSPsw` also relies on the macros of that theme (`field.ftl`,
+`buttons.ftl` and `passkeys.ftl`), since it has a password form to submit. `template.ftl` relies on
+the `locale` bean (`locale.currentLanguageTag`, `locale.supported[].languageTag`/`.url`) for the
+language switcher. Keycloak does not treat any of these as a stable API. Both themes were written
+against the `keycloak.v2` login theme of Keycloak 26.7.3, the version the Compose file runs. On
+every Keycloak upgrade, compare each `login.ftl` and `template.ftl` with the same file of the new
+`keycloak.v2` theme and bring over what has changed.
 
 The title/tab typography and button metrics (colour, radius, shadow, size, font weight — see the
 design-token comment at the top of `digg-ds.css`) are matched byte-for-byte to the reference

@@ -13,6 +13,7 @@
 
 - DiggDS theme with Digg style, no psw entry
 - DiggDSPsw theme with Digg style and user/psw
+- DIGG logo and language switcher shown on error pages in the Digg themes
 
 ### Version 0.7.0
 
