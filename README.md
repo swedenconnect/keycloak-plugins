@@ -23,7 +23,7 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 - [SAML Session Note Mapper](saml-session-note-mapper/README.md) (parked, see below)
 - [Integration Tests](integration-tests/README.md)
 
-Requires **Keycloak 26.7** or later. See the
+Requires **Keycloak 26.8** or later. See the
 [release notes](docs/release-notes.md) for the compatibility change in 0.5.0.
 
 ### Parked modules

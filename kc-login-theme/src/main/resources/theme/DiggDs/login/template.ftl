@@ -1,5 +1,5 @@
 <#--
-  Copy of keycloak.v2's login/template.ftl (Keycloak 26.7.3), used by every page of this theme,
+  Copy of keycloak.v2's login/template.ftl (Keycloak 26.8.1), used by every page of this theme,
   including error and info pages. Only these changes are made:
     - the stock banner above the card (#kc-header) is removed
     - the DIGG logo and a language switcher (.ds-card-topbar) sit inside the card, above the title
