@@ -7,9 +7,15 @@
 
 ---
 
-### Version 0.7.1
+### Version 0.7.2
 
 **Date:** _not yet released_
+
+- 
+
+### Version 0.7.1
+
+**Date:** 2026-10-19
 
 - DiggDS theme with Digg style, no psw entry
 - DiggDSPsw theme with Digg style and user/psw
