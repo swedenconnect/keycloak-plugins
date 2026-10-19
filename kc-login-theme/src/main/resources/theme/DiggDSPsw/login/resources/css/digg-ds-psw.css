@@ -96,9 +96,7 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Page: light frame, white card. The DIGG logo and the language switcher now live in
- * .ds-card-topbar, inside the card itself (see further down) rather than in the Keycloak banner
- * above it, so the stock banner (.pf-v5-c-login__header / #kc-header-wrapper) is hidden visually.
+ * Page: light frame, white card.
  * ------------------------------------------------------------------ */
 
 html,
@@ -118,29 +116,6 @@ body#keycloak-bg {
   background-image: none;
 }
 
-/* Visually hidden, not display:none: the realm name keycloak.v2 renders in here stays available
-   to screen readers, it just no longer takes up visible space now that .ds-card-topbar carries
-   the logo instead. */
-.pf-v5-c-login__header {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  white-space: nowrap;
-  border: 0;
-}
-
-/* keycloak.v2's own built-in language switcher (inherited from the base theme, not something this
-   theme's login.ftl renders): a <select id="login-select-toggle"> inside
-   .pf-v5-c-login__main-header-utilities, confirmed from the actual rendered page. Redundant now
-   that the globe link in .ds-card-topbar does the same job, and carries no unique content worth
-   keeping for screen readers, so it is fully hidden rather than just visually hidden. */
-.pf-v5-c-login__main-header-utilities {
-  display: none;
-}
-
 .pf-v5-c-login__main {
   background-color: var(--ds-bg);
   border: var(--ds-border-width) solid var(--ds-border);
@@ -148,9 +123,8 @@ body#keycloak-bg {
   box-shadow: none;
 }
 
-/* keycloak.v2 lays this out as a flex row (title left, language utilities right) by default, which
-   left-aligns the title once the utilities are hidden above. Force a centred column instead, so
-   .ds-card-topbar and the title both sit centred regardless of the base theme's own layout. */
+/* keycloak.v2 lays this out as a flex row (title left, language utilities right). This theme's
+   template.ftl has no utilities there, so stack .ds-card-topbar and the title in a centred column. */
 .pf-v5-c-login__main-header {
   display: flex;
   flex-direction: column;
@@ -167,8 +141,7 @@ body#keycloak-bg {
 
 /* ------------------------------------------------------------------ *
  * Card top bar: the language switcher and the DIGG logo, inside the card itself, rendered by
- * login.ftl's own header section since the inherited Keycloak banner cannot be moved into the
- * card by CSS alone.
+ * this theme's template.ftl on every page.
  * ------------------------------------------------------------------ */
 
 .ds-card-topbar {
@@ -183,7 +156,7 @@ body#keycloak-bg {
   width: auto;
 }
 
-/* A single link, not a dropdown: login.ftl resolves the one other configured locale and the globe
+/* A single link, not a dropdown: template.ftl resolves the one other configured locale and the globe
    links straight to it. Covered by the shared a:focus-visible rule below, since it is a plain
    <a>. */
 .ds-lang-toggle {

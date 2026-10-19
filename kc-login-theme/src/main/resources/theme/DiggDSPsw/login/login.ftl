@@ -1,8 +1,8 @@
 <#--
-  DIGG discovery-service style login page: a language switcher and the full DIGG logo in the
-  card's top bar, title/tab typography and button styling (size, radius, shadow, weight) matched
-  to a reference design, and the identity providers split into two TABS instead of a top list plus
-  a collapsible badge.
+  DIGG discovery-service style login page: title/tab typography and button styling (size, radius,
+  shadow, weight) matched to a reference design, and the identity providers split into two TABS
+  instead of a top list plus a collapsible badge. The DIGG logo and the language switcher are not
+  rendered here but by this theme's template.ftl, so that every page shows them.
 
   Identity providers are split into two groups by alias:
     - "Legitimering" — personal e-identification (e.g. BankID, foreign eID)
@@ -16,9 +16,8 @@
   form is shown directly instead, with no tabs or badge to unfold.
 
   Tabs and the password badge are built with the hidden-radio/checkbox + <label> technique (no
-  JavaScript), the same no-JS principle the rest of this theme follows. The language switcher is a
-  single globe icon that links directly to the other configured locale — no dropdown, since there
-  are only ever two. No provider logos are shown; every entry is text only.
+  JavaScript), the same no-JS principle the rest of this theme follows. No provider logos are
+  shown; every entry is text only.
 -->
 <#import "template.ftl" as layout>
 <#import "field.ftl" as field>
@@ -41,33 +40,6 @@
             </li>
         </#list>
     </ul>
-</#macro>
-
-<#macro cardTopbar>
-    <div class="ds-card-topbar">
-        <#if realm.internationalizationEnabled?? && realm.internationalizationEnabled && locale?? && locale.supported?? && (locale.supported?size > 1)>
-            <#-- Property names (locale.current, locale.supported[].label/.url) follow Keycloak's
-                 published keycloak.v2 template.ftl; verify against the running 26.7.3 instance,
-                 since that base template is not vendored in this repo. No dropdown: the globe is
-                 itself a direct link to the other configured locale, found below. -->
-            <#assign otherLocaleUrl = "">
-            <#list locale.supported as l>
-                <#if l.label != locale.current && otherLocaleUrl == "">
-                    <#assign otherLocaleUrl = l.url>
-                </#if>
-            </#list>
-            <#if otherLocaleUrl != "">
-                <a class="ds-lang-toggle" href="${otherLocaleUrl}" aria-label="${msg("scChangeLanguage")}">
-                    <svg class="ds-lang-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                        <ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                </a>
-            </#if>
-        </#if>
-        <img class="ds-card-logo" src="${url.resourcesPath}/img/digg-logo.svg" alt="Myndigheten för digital förvaltning">
-    </div>
 </#macro>
 
 <#macro passwordForm autofocus>
@@ -100,7 +72,6 @@
 <!-- template: login.ftl (digg-ds-psw) -->
 
     <#if section = "header">
-        <@cardTopbar />
         ${msg("loginAccountTitle")}
     <#elseif section = "form">
         <#assign personalProviders = []>
