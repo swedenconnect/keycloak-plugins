@@ -42,8 +42,8 @@ release a new version.
 
 ## Release steps
 
-Releases are currently cut by hand. Publishing automatically from a tag, once the build and tests
-pass, is planned; see [Future work](#future-work).
+The version bump, the tests and the tag are done by hand. Publishing is done by a workflow that
+starts when the tag is pushed.
 
 1. Set the release version on `main`:
 
@@ -69,54 +69,121 @@ pass, is planned; see [Future work](#future-work).
    git push origin main && git push origin v<version>
    ```
 
-   Pushing the tag triggers
-   [github-release.yml](../.github/workflows/github-release.yml), which creates the GitHub release
-   pointing at the release notes. It attaches no assets and builds nothing.
+   Pushing the tag triggers two workflows, which do not depend on each other:
 
-5. Publish to Maven Central from the tagged commit:
+   - [github-release.yml](../.github/workflows/github-release.yml) creates the GitHub release
+     pointing at the release notes. It attaches no assets and builds nothing.
+   - [maven-github-deploy.yml](../.github/workflows/maven-github-deploy.yml) builds the tagged
+     commit and publishes it to GitHub Packages. See
+     [Publishing to GitHub Packages](#publishing-to-github-packages).
 
-   ```bash
-   mvn -Prelease clean deploy
-   ```
+5. Open the next development version as `<next>-SNAPSHOT` on `main`.
 
-   See [Publishing to Maven Central](#publishing-to-maven-central) for what the profile does and
-   what has to be in place first.
+<a name="publishing-to-github-packages"></a>
+## Publishing to GitHub Packages
 
-6. Open the next development version as `<next>-SNAPSHOT` on `main`.
+Releases are published to the GitHub Packages Maven registry of this repository:
 
-<a name="publishing-to-maven-central"></a>
-## Publishing to Maven Central
+```
+https://maven.pkg.github.com/swedenconnect/keycloak-plugins
+```
 
-The `release` profile in the parent POM attaches the sources and javadoc jars Central requires,
-signs every artifact with GPG, and uploads the bundle through the Sonatype Central publishing
-plugin. `autoPublish` is on, so a bundle that passes validation goes live without a manual step in
-the Central portal.
+Versions 0.7.0 and 0.7.1 were published to Maven Central and stay there. 0.7.2 is the first
+version in GitHub Packages. Downloading from GitHub Packages always needs a token, also for public
+packages. How consumers set that up is described in
+[Using the Artifacts from GitHub Packages](github-packages.md).
 
-Two things must be set up on the machine doing the release:
+### What the workflow does
 
-1. **A Central portal token**, as a server with id `central` in `~/.m2/settings.xml`:
+1. Checks out the tag and sets up Java 21 from Temurin.
+2. Checks the version, before anything is built, so that a mismatch publishes nothing. Every module
+   that is published must be at the version the tag names, and that version must not be a snapshot.
+3. Builds with `mvn -Prelease clean deploy -DskipTests`. The tests are not run, since they were run
+   in step 3 of the release steps. A failing build or Javadoc stops the release.
+4. Signs every file and deploys it with the Maven deploy plugin to the repository with the id
+   `github`.
 
-   ```xml
-   <server>
-     <id>central</id>
-     <username><!-- token username --></username>
-     <password><!-- token password --></password>
-   </server>
-   ```
+The workflow publishes with the token GitHub gives every workflow, `GITHUB_TOKEN`. The deploy job
+has the permissions `contents: read` and `packages: write`, which lets that token publish packages
+for this repository.
 
-2. **A published GPG key.** The key must be available to `gpg` on the machine and its public half
-   uploaded to a keyserver Central checks, otherwise validation rejects the bundle.
+The workflow can also be started by hand from the Actions page, with a tag such as `v0.7.2` as
+input. It then checks out that tag and does exactly what a pushed tag does. Use this to run a
+failed publish again once the cause is fixed. A version that is already published is refused by
+GitHub Packages, so delete it on the package page first if the run got that far.
 
-Not everything in the reactor is published. `tools` holds example clients and `integration-tests`
-produces an empty jar, so both set `maven.deploy.skip`. The parked modules do the same, so that a
-`-Pparked -Prelease deploy` cannot push them by mistake.
+### What is published
 
-Central is immutable. A version that has been published cannot be altered or withdrawn, so verify
-the build before running `deploy`:
+Every module of the default reactor, except `tools`, which holds example clients, and
+`integration-tests`, which produces an empty jar. Both set the `skipPublishing` property to `true`.
+The parked modules do the same, so that a `-Pparked -Prelease deploy` cannot push them by mistake.
+The root `pom.xml` sets `maven.deploy.skip` to the value of `skipPublishing`, so the Maven deploy
+plugin skips those modules. The version check in the workflow reads `skipPublishing` too.
+
+Each published module comes with its POM, its source and javadoc jars, and a signature for every
+file.
+
+### Signing and secrets
+
+The workflow signs with the Bouncy Castle signer of the Maven GPG plugin, chosen on the command
+line with `-Dgpg.signer=bc`. It reads the key and its password from the environment, so the runner
+needs no `gpg` program and no imported key. Signing from your own machine still uses `gpg`.
+
+These are organisation secrets:
+
+| Secret | What it holds |
+|--------|---------------|
+| `BOT_GPG_PRIVATE_KEY` | the private key, in ASCII armour |
+| `BOT_GPG_PASSWORD` | the password for that key |
+
+### Trying it out first
+
+To build every file a release would upload, without signing or uploading anything:
 
 ```bash
 mvn -Prelease -Dgpg.skip=true clean verify
 ```
+
+### Publishing by hand
+
+Only if the workflow cannot be used. You need:
+
+- A classic personal access token with the `write:packages` scope, from a GitHub account that can
+  write to this repository. Fine-grained tokens are not accepted by the Maven registry.
+- A server with the id `github` in your `~/.m2/settings.xml`, with your GitHub user name and that
+  token:
+
+  ```xml
+  <server>
+    <id>github</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+  ```
+
+- A GPG key that `gpg` can find on your machine.
+
+Run it from the tagged commit:
+
+```bash
+git checkout v<version>
+mvn -Prelease clean deploy
+```
+
+### Publishing to Maven Central again
+
+Kept possible in case it is needed again, but not part of a normal release. The
+`maven-central-release` profile in the parent POM holds the Sonatype Central publishing plugin.
+Selected together with `release`, it replaces the deploy to GitHub Packages with an upload to
+Central, as the server with the id `central` in `settings.xml`, and leaves out modules that set
+`skipPublishing`. `autoPublish` is on, so an upload that passes validation goes live without a
+manual step in the Central portal:
+
+```bash
+mvn -Prelease,maven-central-release clean deploy
+```
+
+Central is immutable. A version that has been published there cannot be altered or withdrawn.
 
 ## Versioning
 
@@ -127,8 +194,8 @@ The project is pre-1.0, so the minor number carries breaking changes:
 - **Patch** (`0.6.0` to `0.6.1`) for fixes and additions that are drop-in.
 
 **Never reuse a version number that has already been published**, even if the artifact set has
-since changed. Maven Central is immutable: a version cannot be altered or withdrawn once it is up,
-so two different artifact sets sharing one set of coordinates is a permanent inconsistency.
+since changed. Versions on Maven Central cannot be altered or withdrawn, and a version replaced in
+GitHub Packages leaves consumers with cached copies that differ from what is published.
 
 ## Parked modules
 
@@ -146,11 +213,6 @@ provider IDs.
 
 <a name="future-work"></a>
 ## Future work
-
-- **Publishing to Central from a tag.** The `v*` tag already creates the GitHub release. A second
-  workflow on the same trigger could run the build and tests and publish to Central only on
-  success, replacing the manual `deploy` step above. It needs the Central token and the signing
-  key as repository secrets.
 
 - **Enforcing the tagging rules.** A GitHub tag ruleset restricting who may create refs matching
   `v*` would make rule 1 and the maintainer restriction real rather than advisory.

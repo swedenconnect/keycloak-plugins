@@ -3,7 +3,6 @@
 # Keycloak Plugins - Release Notes
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.keycloak/keycloak-plugins-parent.svg)
 
 ---
 
@@ -11,7 +10,10 @@
 
 **Date:** _not yet released_
 
-- 
+- **The plugins are published to GitHub Packages instead of Maven Central.** Versions 0.7.0 and
+  0.7.1 stay on Maven Central. Downloading needs a GitHub token, see
+  [Using the Artifacts from GitHub Packages](github-packages.md)
+  ([#57](https://github.com/swedenconnect/keycloak-plugins/issues/57)).
 
 ### Version 0.7.1
 

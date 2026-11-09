@@ -1,8 +1,8 @@
 # Creates a GitHub release when a version tag is pushed.
 #
 # Nothing is built and no assets are attached - the release is a pointer to the release notes. The
-# jars are published to Maven Central by the maintainer running "mvn -Prelease deploy"; see
-# docs/releasing.md.
+# jars are published to GitHub Packages by maven-github-deploy.yml, which is triggered by the same
+# tags; see docs/releasing.md.
 name: Create GitHub release
 
 on:
