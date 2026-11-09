@@ -8,7 +8,7 @@
 
 ### Version 0.7.2
 
-**Date:** _not yet released_
+**Date:** 2026-11-09
 
 - **The plugins are published to GitHub Packages instead of Maven Central.** Versions 0.7.0 and
   0.7.1 stay on Maven Central. Downloading needs a GitHub token, see
