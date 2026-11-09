@@ -2,7 +2,7 @@
 
 # Keycloak Plugins
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![Maven Central](https://img.shields.io/maven-central/v/se.swedenconnect.keycloak/keycloak-plugins-parent.svg)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Keycloak Plugins for use with Sweden Connect Federation
 
@@ -15,6 +15,7 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 ## Documentation
 
 - [Release notes](docs/release-notes.md)
+- [Using the Artifacts from GitHub Packages](docs/github-packages.md)
 - [Releasing](docs/releasing.md) (maintainers)
 - [Sweden Connect Provider](docs/sweden-connect-provider.MD)
 - [Keycloak Login Customizer](docs/keycloak-login-customizer.MD)
@@ -25,6 +26,12 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 
 Requires **Keycloak 26.8** or later. See the
 [release notes](docs/release-notes.md) for the compatibility change in 0.5.0.
+
+### Maven artifacts
+
+The plugins are published to the GitHub Packages Maven registry of this repository, from version
+0.7.2. Versions 0.7.0 and 0.7.1 are on Maven Central. Downloading from GitHub Packages needs a
+GitHub token, see [Using the Artifacts from GitHub Packages](docs/github-packages.md).
 
 ### Parked modules
 

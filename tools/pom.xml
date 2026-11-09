@@ -22,7 +22,7 @@
           Example clients used by the tests and for manual probing. They are not part of the
           product, so the module is built and installed, but never published.
         -->
-        <maven.deploy.skip>true</maven.deploy.skip>
+        <skipPublishing>true</skipPublishing>
     </properties>
 
     <build>

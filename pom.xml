@@ -86,14 +86,25 @@
         </profile>
 
         <!--
-          Publishing to Maven Central. Attaches the sources and javadoc jars that Central requires,
-          signs every artifact with GPG, and uploads through the Sonatype Central publishing plugin.
-          The credentials are taken from the server with id "central" in settings.xml:
+          Attaches the sources and javadoc jars, signs every artifact with GPG, and deploys with the
+          Maven deploy plugin to the GitHub Packages Maven registry of this repository. The
+          credentials are taken from the server with id "github" in settings.xml. No snapshot
+          repository is given, since snapshots are not published. Modules that set
+          skipPublishing are not deployed:
 
               mvn -Prelease clean deploy
         -->
         <profile>
             <id>release</id>
+
+            <distributionManagement>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub Packages</name>
+                    <url>https://maven.pkg.github.com/swedenconnect/keycloak-plugins</url>
+                </repository>
+            </distributionManagement>
+
             <build>
                 <plugins>
                     <plugin>
@@ -140,7 +151,22 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
 
+        <!--
+          Kept in case publishing to Maven Central is needed again. Selected together with the
+          release profile, it replaces the deploy to GitHub Packages with an upload through the
+          Sonatype Central publishing plugin, which leaves out modules that set skipPublishing. The
+          credentials are taken from the server with id "central" in settings.xml:
+
+              mvn -Prelease,maven-central-release clean deploy
+        -->
+        <profile>
+            <id>maven-central-release</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
@@ -159,6 +185,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <keycloak.version>26.8.1</keycloak.version>
+
+        <!--
+          Whether a module is left out of publishing. A module that must not be published sets
+          skipPublishing to true in its own POM. maven.deploy.skip makes the Maven deploy plugin,
+          which deploys to GitHub Packages in the release profile, skip those modules. The Central
+          publishing plugin of the maven-central-release profile reads skipPublishing directly.
+        -->
+        <skipPublishing>false</skipPublishing>
+        <maven.deploy.skip>${skipPublishing}</maven.deploy.skip>
     </properties>
 
     <dependencyManagement>
