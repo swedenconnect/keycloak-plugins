@@ -18,6 +18,7 @@ This repository consists of a keycloak plugins to use in accordance to [Swedish 
 - [Using the Artifacts from GitHub Packages](docs/github-packages.md)
 - [Releasing](docs/releasing.md) (maintainers)
 - [Sweden Connect Provider](docs/sweden-connect-provider.MD)
+- [HMAC Attribute Subject Mapper](docs/hmac-attribute-sub-mapper.md)
 - [Keycloak Login Customizer](docs/keycloak-login-customizer.MD)
 - [Tools](docs/tools.MD)
 - [IdP-Hint OIDC Provider](idp-hint-oidc-provider/README.md) (parked, see below)
