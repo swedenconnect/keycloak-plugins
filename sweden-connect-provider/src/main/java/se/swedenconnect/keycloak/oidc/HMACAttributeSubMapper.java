@@ -84,7 +84,10 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA256";
   private static final String DEFAULT_SUB_ENCODING = "Base64";
   private static final String DEFAULT_SUBJECT_TYPE = "public";
-  private static final List<String> SUPPORTED_HMAC_ALGORITHMS = List.of("HmacSHA256", "HmacSHA384", "HmacSHA512");
+  private static final List<String> SUPPORTED_HMAC_ALGORITHMS = List.of(
+          "HmacSHA256",
+          "HmacSHA384",
+          "HmacSHA512");
   // RFC 2104 discourages keys shorter than the HMAC output length.
   private static final Map<String, Integer> MINIMUM_KEY_LENGTHS = Map.of(
       "HmacSHA256", 32,
