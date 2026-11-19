@@ -111,12 +111,16 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     if (key == null || key.isEmpty()) {
       throw new ProtocolMapperConfigException("Configure a non-empty HMAC key.", "hmacSubMapperMissingKey");
     }
-    final String algorithm = Optional.ofNullable(mapperModel.getConfig().get(HMAC_ALGORITHM)).filter(NOT_BLANK).orElse(DEFAULT_HMAC_ALGORITHM);
+    final String algorithm = Optional.ofNullable(mapperModel.getConfig()
+                                      .get(HMAC_ALGORITHM))
+                                      .filter(NOT_BLANK)
+                                      .orElse(DEFAULT_HMAC_ALGORITHM);
     try {
       initializeHmac(new HmacConfiguration(algorithm, key));
     }
     catch (final NoSuchAlgorithmException e) {
-      throw new ProtocolMapperConfigException("HMAC algorithm must be one of " + String.join(", ", SUPPORTED_HMAC_ALGORITHMS)
+      throw new ProtocolMapperConfigException("HMAC algorithm must be one of " +
+              String.join(", ", SUPPORTED_HMAC_ALGORITHMS)
           + ".", "hmacSubMapperUnsupportedAlgorithm", e);
     }
     catch (final InvalidKeyException e) {
@@ -128,7 +132,10 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
           "hmacSubMapperInvalidHmac", e);
     }
 
-    final String encoding = Optional.ofNullable(mapperModel.getConfig().get(SUB_ENCODING)).filter(NOT_BLANK).orElse(DEFAULT_SUB_ENCODING);
+    final String encoding = Optional.ofNullable(mapperModel.getConfig()
+                                      .get(SUB_ENCODING))
+                                      .filter(NOT_BLANK)
+                                      .orElse(DEFAULT_SUB_ENCODING);
     if (!"Base64".equals(encoding) && !"Hex".equals(encoding)) {
       throw new ProtocolMapperConfigException("Subject encoding must be Base64 or Hex.",
           "hmacSubMapperUnsupportedEncoding");
@@ -305,7 +312,10 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
         return clientOverride;
       }
     }
-    return  Optional.ofNullable(mappingModel.getConfig().get(SUBJECT_TYPE)).filter(NOT_BLANK).orElse(DEFAULT_SUBJECT_TYPE);
+    return  Optional.ofNullable(mappingModel.getConfig()
+                    .get(SUBJECT_TYPE))
+                    .filter(NOT_BLANK)
+                    .orElse(DEFAULT_SUBJECT_TYPE);
   }
 
   private static boolean isValidSubjectType(final String subjectType) {
@@ -357,7 +367,10 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
   }
 
   private String encodeHash(final byte[] hash, final ProtocolMapperModel mappingModel) {
-    final String encoding = Optional.ofNullable(mappingModel.getConfig().get(SUB_ENCODING)).filter(NOT_BLANK).orElse(DEFAULT_SUB_ENCODING);
+    final String encoding = Optional.ofNullable(mappingModel.getConfig()
+                                    .get(SUB_ENCODING))
+                                    .filter(NOT_BLANK)
+                                    .orElse(DEFAULT_SUB_ENCODING);
     return switch (encoding) {
     case "Base64" -> Base64.getEncoder().encodeToString(hash);
     case "Hex" -> HexFormat.of().formatHex(hash);
@@ -370,7 +383,10 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
 
   private Mac getHmac(final ProtocolMapperModel mappingModel) {
     final String key = mappingModel.getConfig().get(HMAC_KEY);
-    final String algorithm = Optional.ofNullable(mappingModel.getConfig().get(HMAC_ALGORITHM)).filter(NOT_BLANK).orElse(DEFAULT_HMAC_ALGORITHM);
+    final String algorithm = Optional.ofNullable(mappingModel.getConfig()
+                                    .get(HMAC_ALGORITHM))
+                                    .filter(NOT_BLANK)
+                                    .orElse(DEFAULT_HMAC_ALGORITHM);
     if (key == null || key.isEmpty()) {
       log.error("Unable to initialize HMAC for protocol mapper: HMAC key is missing");
       throw mappingError("Unable to initialize configured HMAC");
