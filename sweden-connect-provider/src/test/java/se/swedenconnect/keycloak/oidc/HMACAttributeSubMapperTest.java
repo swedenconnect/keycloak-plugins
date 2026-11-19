@@ -1,31 +1,39 @@
 package se.swedenconnect.keycloak.oidc;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.keycloak.models.AuthenticatedClientSessionModel;
-import org.keycloak.models.ClientModel;
-import org.keycloak.models.ClientSessionContext;
-import org.keycloak.models.ProtocolMapperModel;
-import org.keycloak.models.UserModel;
-import org.keycloak.models.UserSessionModel;
-import org.keycloak.protocol.oidc.OIDCConfigAttributes;
-import org.keycloak.representations.LogoutToken;
-import org.keycloak.representations.IDToken;
-import org.keycloak.representations.AccessToken;
-import org.keycloak.services.ErrorResponseException;
-import org.mockito.Mockito;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.keycloak.connections.httpclient.HttpClientProvider;
+import org.keycloak.models.AuthenticatedClientSessionModel;
+import org.keycloak.models.ClientModel;
+import org.keycloak.models.ClientScopeModel;
+import org.keycloak.models.ClientSessionContext;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.ProtocolMapperModel;
+import org.keycloak.models.UserModel;
+import org.keycloak.models.UserSessionModel;
+import org.keycloak.protocol.ProtocolMapperConfigException;
+import org.keycloak.protocol.oidc.OIDCConfigAttributes;
+import org.keycloak.protocol.oidc.utils.PairwiseSubMapperValidator;
+import org.keycloak.representations.AccessToken;
+import org.keycloak.representations.IDToken;
+import org.keycloak.representations.LogoutToken;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -57,16 +65,36 @@ class HMACAttributeSubMapperTest {
   }
 
   @Test
-  void missingAttributeThrows() {
+  void missingAttributePreservesAllIncomingTokens() {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
         HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
     ));
-    final IDToken token = new IDToken();
+    final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
+    final UserSessionModel userSession = userSession("personalIdentityNumber", null);
+    final String originalSubject = "original-subject";
+    final IDToken idToken = new IDToken();
+    idToken.setSubject(originalSubject);
+    final AccessToken accessToken = new AccessToken();
+    accessToken.setSubject(originalSubject);
+    final AccessToken userInfo = new AccessToken();
+    userInfo.getOtherClaims().put("sub", originalSubject);
+    final AccessToken introspectionToken = new AccessToken();
+    introspectionToken.setSubject(originalSubject);
+    final LogoutToken logoutToken = new LogoutToken();
+    logoutToken.setSubject(originalSubject);
 
-    assertThrows(ErrorResponseException.class, () -> new HMACAttributeSubMapper().transformIDToken(
-        token, mapperModel, null, userSession("personalIdentityNumber", null), null
-    ));
+    assertSame(idToken, mapper.transformIDToken(idToken, mapperModel, null, userSession, null));
+    assertSame(accessToken, mapper.transformAccessToken(accessToken, mapperModel, null, userSession, null));
+    assertSame(userInfo, mapper.transformUserInfoToken(userInfo, mapperModel, null, userSession, null));
+    assertSame(introspectionToken,
+        mapper.transformIntrospectionToken(introspectionToken, mapperModel, null, userSession, null));
+    assertSame(logoutToken, mapper.transformLogoutToken(logoutToken, mapperModel, null, userSession, null));
+    assertEquals(originalSubject, idToken.getSubject());
+    assertEquals(originalSubject, accessToken.getSubject());
+    assertEquals(originalSubject, userInfo.getOtherClaims().get("sub"));
+    assertEquals(originalSubject, introspectionToken.getSubject());
+    assertEquals(originalSubject, logoutToken.getSubject());
   }
 
   @ParameterizedTest
@@ -209,7 +237,7 @@ class HMACAttributeSubMapperTest {
   }
 
   @Test
-  void pairwiseModeFailsWhenSectorCannotBeResolved() {
+  void pairwiseModePreservesIncomingTokenWhenSectorCannotBeResolved() {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
         HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key",
@@ -224,9 +252,145 @@ class HMACAttributeSubMapperTest {
         "https://two.example.org/callback"
     ));
 
-    assertThrows(ErrorResponseException.class, () -> new HMACAttributeSubMapper().transformIDToken(
-        new IDToken(), mapperModel, null,
+    final IDToken token = new IDToken();
+    token.setSubject("original-subject");
+    assertSame(token, new HMACAttributeSubMapper().transformIDToken(
+        token, mapperModel, null,
         userSession("personalIdentityNumber", "personnummer-value"), clientSessionContext));
+    assertEquals("original-subject", token.getSubject());
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {" \t"})
+  void usesDefaultsForNullOrBlankOptionalSettings(final String value) throws Exception {
+    final ProtocolMapperModel defaults = mapperModel(Map.of(
+        HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
+        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+    ));
+    final Map<String, String> config = new HashMap<>(defaults.getConfig());
+    config.put(HMACAttributeSubMapper.HMAC_ALGORITHM, value);
+    config.put(HMACAttributeSubMapper.SUB_ENCODING, value);
+    config.put(HMACAttributeSubMapper.SUBJECT_TYPE, value);
+    final ProtocolMapperModel nullOrBlankSettings = mapperModel(config);
+    final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
+    final UserSessionModel userSession = userSession("personalIdentityNumber", "personnummer-value");
+
+    mapper.validateConfig(null, null, mock(ClientModel.class), nullOrBlankSettings);
+    final String defaultSubject = mapper.transformIDToken(new IDToken(), defaults, null, userSession, null).getSubject();
+    final String subject = mapper.transformIDToken(new IDToken(), nullOrBlankSettings, null, userSession, null)
+        .getSubject();
+    assertEquals(defaultSubject, subject);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "attribute.names, ''",
+      "hmac.key, ''",
+      "hmac.algorithm, unsupported",
+      "sub.encoding, unsupported",
+      "subject.type, unsupported"
+  })
+  void rejectsInvalidMapperSettings(final String setting, final String value) {
+    assertThrows(ProtocolMapperConfigException.class, () -> new HMACAttributeSubMapper().validateConfig(
+        null, null, mock(ClientScopeModel.class), validationModel(setting, value)));
+  }
+
+  @Test
+  void allowsPairwiseDefaultOnClientScopeWithoutClientSpecificSettings() throws Exception {
+    new HMACAttributeSubMapper().validateConfig(null, null, mock(ClientScopeModel.class),
+        validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise"));
+  }
+
+  @Test
+  void publicClientOverrideDoesNotRequireSector() throws Exception {
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getAttribute(HMACAttributeSubMapper.CLIENT_SUBJECT_TYPE)).thenReturn("public");
+    when(client.getAttribute(OIDCConfigAttributes.SECTOR_IDENTIFIER_URI)).thenReturn("invalid URI");
+
+    new HMACAttributeSubMapper().validateConfig(null, null, client,
+        validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise"));
+  }
+
+  @Test
+  void rejectsUnsupportedClientSubjectType() {
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getAttribute(HMACAttributeSubMapper.CLIENT_SUBJECT_TYPE)).thenReturn("unsupported");
+
+    assertThrows(ProtocolMapperConfigException.class, () -> new HMACAttributeSubMapper().validateConfig(
+        null, null, client, validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "public")));
+  }
+
+  @Test
+  void acceptsRedirectUrisWithSingleHost() throws Exception {
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getRootUrl()).thenReturn("https://client.example.org");
+    when(client.getRedirectUris()).thenReturn(Set.of("/callback", "https://client.example.org/other"));
+
+    new HMACAttributeSubMapper().validateConfig(null, null, client,
+        validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "https://one.example.org/callback, https://two.example.org/callback, pairwiseClientRedirectURIsMultipleHosts",
+      "app:/callback, app:/other, pairwiseClientRedirectURIsMissingHost"
+  })
+  void rejectsRedirectUrisWithoutSingleSector(
+      final String firstRedirect, final String secondRedirect, final String messageKey) {
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getAttribute(HMACAttributeSubMapper.CLIENT_SUBJECT_TYPE)).thenReturn("pairwise");
+    when(client.getRedirectUris()).thenReturn(Set.of(firstRedirect, secondRedirect));
+
+    final var exception = assertThrows(ProtocolMapperConfigException.class, () ->
+        new HMACAttributeSubMapper().validateConfig(null, null, client,
+            validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "public")));
+    assertEquals(messageKey, exception.getMessageKey());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"https://invalid host/sector.json", "https:/sector.json", "//sector.example.org/sector.json"})
+  void rejectsMalformedSectorIdentifierUri(final String sectorUri) {
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getAttribute(OIDCConfigAttributes.SECTOR_IDENTIFIER_URI)).thenReturn(sectorUri);
+    when(client.getRedirectUris()).thenReturn(Set.of("https://client.example.org/callback"));
+
+    final var exception = assertThrows(ProtocolMapperConfigException.class, () ->
+        new HMACAttributeSubMapper().validateConfig(null, null, client,
+            validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise")));
+    assertEquals(PairwiseSubMapperValidator.PAIRWISE_MALFORMED_SECTOR_IDENTIFIER_URI, exception.getMessageKey());
+  }
+
+  @Test
+  void validatesRedirectUrisFromSectorIdentifierUri() throws Exception {
+    final String sectorUri = "https://sector.example.org/sector.json";
+    final String firstRedirect = "https://one.example.org/callback";
+    final String secondRedirect = "https://two.example.org/callback";
+    final ClientModel client = mock(ClientModel.class);
+    when(client.getAttribute(OIDCConfigAttributes.SECTOR_IDENTIFIER_URI)).thenReturn(sectorUri);
+    when(client.getRedirectUris()).thenReturn(Set.of(firstRedirect, secondRedirect));
+    final KeycloakSession session = mock(KeycloakSession.class);
+    final HttpClientProvider http = mock(HttpClientProvider.class);
+    when(session.getProvider(HttpClientProvider.class)).thenReturn(http);
+    when(http.getString(sectorUri)).thenReturn("[\"%s\", \"%s\"]".formatted(firstRedirect, secondRedirect));
+    final ProtocolMapperModel config = validationModel(HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise");
+    final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
+
+    mapper.validateConfig(session, null, client, config);
+
+    when(http.getString(sectorUri)).thenReturn("[\"%s\"]".formatted(firstRedirect));
+    final var exception = assertThrows(ProtocolMapperConfigException.class,
+        () -> mapper.validateConfig(session, null, client, config));
+    assertEquals(PairwiseSubMapperValidator.PAIRWISE_REDIRECT_URIS_MISMATCH, exception.getMessageKey());
+  }
+
+  private static ProtocolMapperModel validationModel(final String setting, final String value) {
+    final Map<String, String> config = new HashMap<>(Map.of(
+        HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
+        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+    ));
+    config.put(setting, value);
+    return mapperModel(config);
   }
 
   private static ClientSessionContext clientSessionContext(final String subjectType, final String sectorUri) {

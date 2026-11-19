@@ -12,11 +12,18 @@ Add the **HMAC Attribute Sub Mapper** to the client or to a client scope used by
 | Setting | Required | Default | Description |
 |---|---:|---|---|
 | User Attributes | Yes | — | Ordered list of user attribute names, one per line. The first attribute with a non-null value is used as the HMAC input. |
-| HMAC Key | Yes | — | Symmetric key used for the HMAC. Keycloak marks this mapper setting as secret. |
+| HMAC Key | Yes | — | Symmetric key used for the HMAC. See the security warning below. |
 | HMAC Algorithm | No | `HmacSHA256` | HMAC algorithm: `HmacSHA256`, `HmacSHA384`, or `HmacSHA512`. |
 | Subject Prefix | No | — | Optional text prepended to the encoded digest and separated by `-`. |
 | Subject Encoding | No | `Base64` | Encode the digest as standard Base64 or lowercase hexadecimal (`Hex`). |
 | Default Subject Type | No | `public` | Use the same subject for all clients (`public`) or a sector-specific subject (`pairwise`). A client can override this default. |
+
+> **Security warning:** Keycloak does not mask the HMAC key in the Admin Console or redact it
+> from configuration exports. Anyone who obtains the key can compute subject identifiers for
+> guessed user attribute values. Restrict access to the mapper configuration, treat exports
+> as sensitive, and do not commit them to source control.
+
+Leaving HMAC Algorithm, Subject Encoding, or Default Subject Type blank uses its default.
 
 For example, the **User Attributes** field can contain:
 
@@ -39,10 +46,15 @@ includes the client's sector identifier along with that value in the input, usin
 length-prefixed sector encoding. Clients that resolve to the same sector get the same subject for
 the same attribute value; clients in different sectors get different subjects.
 
-The sector is resolved at token-mapping time from the OIDC client's `sectorIdentifierUri`
-setting, when configured. The host of that URI is used as the sector. Otherwise, Keycloak derives
-the sector from the registered redirect URI hosts. If no single valid sector can be resolved,
-pairwise mapping fails with a server error rather than issuing a public subject.
+The host of the OIDC client's `sectorIdentifierUri` is used as the sector when that setting is
+configured. Otherwise, Keycloak derives the sector from the registered redirect URIs, which must
+resolve to a single host.
+
+Keycloak validates the mapper settings when the mapper is saved. For a mapper saved directly on a
+client in effective `pairwise` mode, it also validates the client's sector configuration. If
+`sectorIdentifierUri` is configured, Keycloak fetches the JSON list at that URI and checks that it
+covers the client's registered redirect URIs. Saving a mapper on a shared client scope cannot
+validate individual clients.
 
 ## Token behavior
 
@@ -54,6 +66,7 @@ Ensure this mapper runs after any other mapper that can set `sub`; protocol mapp
 priority value run later in Keycloak. The built-in subject mapper has a lower priority, so this
 mapper can override its value.
 
-Mapping fails if no configured user attribute has a value, if the HMAC configuration is invalid,
-or if pairwise mode cannot resolve a sector. Configure a non-empty HMAC key and an attribute
-present on every user for whom tokens are issued.
+If the mapper cannot compute the subject (for example, because a user attribute is missing or a
+pairwise sector cannot be resolved), it logs an error and returns the incoming token unchanged.
+Any existing subject is preserved and may not be pairwise. Configure a non-empty HMAC key and
+an attribute present on every user for whom tokens are issued.
