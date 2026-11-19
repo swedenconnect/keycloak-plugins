@@ -11,8 +11,8 @@ Add the **HMAC Attribute Sub Mapper** to the client or to a client scope used by
 
 | Setting | Required | Default | Description |
 |---|---:|---|---|
-| User Attributes | Yes | — | Ordered list of user attribute names, one per line. The first attribute with a non-null value is used as the HMAC input. |
-| HMAC Key | Yes | — | Symmetric key used for the HMAC. See the security warning below. |
+| User Attributes | Yes | — | Ordered list of user attribute names, one per line. The first attribute with a non-blank value is used as the HMAC input. |
+| HMAC Key | Yes | — | Symmetric key used for the HMAC. Must be at least 32 bytes for `HmacSHA256`, 48 bytes for `HmacSHA384`, and 64 bytes for `HmacSHA512` (UTF-8 encoded). See the security warning below. |
 | HMAC Algorithm | No | `HmacSHA256` | HMAC algorithm: `HmacSHA256`, `HmacSHA384`, or `HmacSHA512`. |
 | Subject Prefix | No | — | Optional text prepended to the encoded digest and separated by `-`. |
 | Subject Encoding | No | `Base64` | Encode the digest as standard Base64 or lowercase hexadecimal (`Hex`). |
@@ -23,6 +23,11 @@ Add the **HMAC Attribute Sub Mapper** to the client or to a client scope used by
 > guessed user attribute values. Restrict access to the mapper configuration, treat exports
 > as sensitive, and do not commit them to source control.
 
+The minimum key length equals the algorithm's output length, as recommended by RFC 2104. Use a
+randomly generated key, for example `openssl rand -base64 48` for `HmacSHA256` (64 characters) or
+`openssl rand -base64 64` for `HmacSHA512` (88 characters). The length is checked both when the
+mapper is saved and when tokens are issued, so a realm imported with a short key fails at runtime.
+
 Leaving HMAC Algorithm, Subject Encoding, or Default Subject Type blank uses its default.
 
 For example, the **User Attributes** field can contain:
@@ -32,8 +37,9 @@ urn:oid:1.2.752.29.4.13
 personalIdentityNumber
 ```
 
-The first attribute is tried first; the second is only used if the first is absent. A present
-empty value is not skipped and will be HMACed as an empty string.
+The first attribute is tried first; the second is only used if the first is absent, empty, or
+contains only whitespace. Blank values are skipped because they would give every such user the
+same subject.
 
 ## Public and pairwise subjects
 
@@ -66,7 +72,10 @@ Ensure this mapper runs after any other mapper that can set `sub`; protocol mapp
 priority value run later in Keycloak. The built-in subject mapper has a lower priority, so this
 mapper can override its value.
 
-If the mapper cannot compute the subject (for example, because a user attribute is missing or a
-pairwise sector cannot be resolved), it logs an error and returns the incoming token unchanged.
-Any existing subject is preserved and may not be pairwise. Configure a non-empty HMAC key and
-an attribute present on every user for whom tokens are issued.
+If the mapper cannot compute the subject (for example, because no configured attribute has a
+value, the key is invalid, or a pairwise sector cannot be resolved), it logs the cause and fails
+the request with the OAuth error `server_error` (HTTP 500). A token is never issued with the
+incoming subject, since that would expose Keycloak's internal user ID instead of a pairwise or
+HMAC subject. For back-channel logout, Keycloak logs the failure and skips the logout token for
+that client only. Configure a valid HMAC key and an attribute present on every user for whom
+tokens are issued.

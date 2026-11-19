@@ -11,10 +11,12 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.keycloak.OAuthErrorException;
 import org.keycloak.connections.httpclient.HttpClientProvider;
 import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
@@ -30,20 +32,22 @@ import org.keycloak.protocol.oidc.utils.PairwiseSubMapperValidator;
 import org.keycloak.representations.AccessToken;
 import org.keycloak.representations.IDToken;
 import org.keycloak.representations.LogoutToken;
+import org.keycloak.services.ErrorResponseException;
 import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class HMACAttributeSubMapperTest {
 
+  private static final String KEY = "test-hmac-key-with-sixty-four-bytes-0123456789-abcdefghijklmnopq";
+
   @Test
   void setsSubjectToBase64HmacOfConfiguredUserAttribute() throws Exception {
     final String attributeValue = "personnummer-value";
-    final String key = "test-hmac-key";
+    final String key = KEY;
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
         HMACAttributeSubMapper.HMAC_KEY, key,
@@ -64,37 +68,56 @@ class HMACAttributeSubMapperTest {
     assertEquals(expected, token.getSubject());
   }
 
-  @Test
-  void missingAttributePreservesAllIncomingTokens() {
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {" \t"})
+  void missingOrBlankAttributeFailsAllTokenTypes(final String attributeValue) {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+        HMACAttributeSubMapper.HMAC_KEY, KEY
     ));
     final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
-    final UserSessionModel userSession = userSession("personalIdentityNumber", null);
-    final String originalSubject = "original-subject";
-    final IDToken idToken = new IDToken();
-    idToken.setSubject(originalSubject);
-    final AccessToken accessToken = new AccessToken();
-    accessToken.setSubject(originalSubject);
-    final AccessToken userInfo = new AccessToken();
-    userInfo.getOtherClaims().put("sub", originalSubject);
-    final AccessToken introspectionToken = new AccessToken();
-    introspectionToken.setSubject(originalSubject);
-    final LogoutToken logoutToken = new LogoutToken();
-    logoutToken.setSubject(originalSubject);
+    final UserSessionModel userSession = userSession("personalIdentityNumber", attributeValue);
 
-    assertSame(idToken, mapper.transformIDToken(idToken, mapperModel, null, userSession, null));
-    assertSame(accessToken, mapper.transformAccessToken(accessToken, mapperModel, null, userSession, null));
-    assertSame(userInfo, mapper.transformUserInfoToken(userInfo, mapperModel, null, userSession, null));
-    assertSame(introspectionToken,
-        mapper.transformIntrospectionToken(introspectionToken, mapperModel, null, userSession, null));
-    assertSame(logoutToken, mapper.transformLogoutToken(logoutToken, mapperModel, null, userSession, null));
-    assertEquals(originalSubject, idToken.getSubject());
-    assertEquals(originalSubject, accessToken.getSubject());
-    assertEquals(originalSubject, userInfo.getOtherClaims().get("sub"));
-    assertEquals(originalSubject, introspectionToken.getSubject());
-    assertEquals(originalSubject, logoutToken.getSubject());
+    assertServerError(() -> mapper.transformIDToken(new IDToken(), mapperModel, null, userSession, null));
+    assertServerError(() -> mapper.transformAccessToken(new AccessToken(), mapperModel, null, userSession, null));
+    assertServerError(() -> mapper.transformUserInfoToken(new AccessToken(), mapperModel, null, userSession, null));
+    assertServerError(
+        () -> mapper.transformIntrospectionToken(new AccessToken(), mapperModel, null, userSession, null));
+    assertServerError(() -> mapper.transformLogoutToken(new LogoutToken(), mapperModel, null, userSession, null));
+  }
+
+  @Test
+  void skipsBlankAttributeValues() throws Exception {
+    final ProtocolMapperModel mapperModel = mapperModel(Map.of(
+        HMACAttributeSubMapper.ATTRIBUTE_NAMES, "blank\nempty\npersonalIdentityNumber",
+        HMACAttributeSubMapper.HMAC_KEY, KEY
+    ));
+    final Map<String, String> attributes = new LinkedHashMap<>();
+    attributes.put("blank", " ");
+    attributes.put("empty", "");
+    attributes.put("personalIdentityNumber", "personnummer-value");
+
+    final IDToken token = new HMACAttributeSubMapper().transformIDToken(
+        new IDToken(), mapperModel, null, userSession(attributes), null);
+
+    final Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    assertEquals(Base64.getEncoder().encodeToString(
+        mac.doFinal("personnummer-value".getBytes(StandardCharsets.UTF_8))), token.getSubject());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"HmacSHA256, 31", "HmacSHA384, 47", "HmacSHA512, 63"})
+  void rejectsTooShortKeyAtTokenTime(final String algorithm, final int keyLength) {
+    final ProtocolMapperModel mapperModel = mapperModel(Map.of(
+        HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
+        HMACAttributeSubMapper.HMAC_KEY, KEY.substring(0, keyLength),
+        HMACAttributeSubMapper.HMAC_ALGORITHM, algorithm
+    ));
+
+    assertServerError(() -> new HMACAttributeSubMapper().transformIDToken(
+        new IDToken(), mapperModel, null, userSession("personalIdentityNumber", "personnummer-value"), null));
   }
 
   @ParameterizedTest
@@ -103,7 +126,7 @@ class HMACAttributeSubMapperTest {
   void appliesOptionalPrefixToAllTokenTypes(final String prefix) throws Exception {
     final Map<String, String> config = new HashMap<>(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+        HMACAttributeSubMapper.HMAC_KEY, KEY
     ));
     if (prefix != null) {
       config.put(HMACAttributeSubMapper.SUB_PREFIX, prefix);
@@ -118,7 +141,7 @@ class HMACAttributeSubMapperTest {
         new AccessToken(), mapperModel, null, userSession, null);
 
     final Mac mac = Mac.getInstance("HmacSHA256");
-    mac.init(new SecretKeySpec("test-hmac-key".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    mac.init(new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
     final String hash = Base64.getEncoder().encodeToString(
         mac.doFinal("personnummer-value".getBytes(StandardCharsets.UTF_8)));
     final String expected = prefix == null || prefix.isBlank() ? hash : prefix + "-" + hash;
@@ -133,7 +156,7 @@ class HMACAttributeSubMapperTest {
         HMACAttributeSubMapper.ATTRIBUTE_NAMES,
         "primaryId\nsecondaryId\nfallbackId",
         HMACAttributeSubMapper.HMAC_KEY,
-        "test-hmac-key"
+        KEY
     );
     final ProtocolMapperModel mapperModel = mapperModel(config);
     final Map<String, String> attributes = new LinkedHashMap<>();
@@ -145,7 +168,7 @@ class HMACAttributeSubMapperTest {
         new IDToken(), mapperModel, null, userSession, null);
 
     final Mac mac = Mac.getInstance("HmacSHA256");
-    mac.init(new SecretKeySpec("test-hmac-key".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    mac.init(new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
     final String expected = Base64.getEncoder().encodeToString(
         mac.doFinal("secondary-value".getBytes(StandardCharsets.UTF_8)));
     assertEquals(expected, token.getSubject());
@@ -155,7 +178,7 @@ class HMACAttributeSubMapperTest {
   void hexEncodesMacValue() throws Exception {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key",
+        HMACAttributeSubMapper.HMAC_KEY, KEY,
         HMACAttributeSubMapper.SUB_ENCODING, "Hex"
     ));
     final IDToken token = new HMACAttributeSubMapper().transformIDToken(
@@ -163,7 +186,7 @@ class HMACAttributeSubMapperTest {
         userSession("personalIdentityNumber", "personnummer-value"), null);
 
     final Mac mac = Mac.getInstance("HmacSHA256");
-    mac.init(new SecretKeySpec("test-hmac-key".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    mac.init(new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
     final String expected = java.util.HexFormat.of().formatHex(
         mac.doFinal("personnummer-value".getBytes(StandardCharsets.UTF_8)));
     assertEquals(expected, token.getSubject());
@@ -173,7 +196,7 @@ class HMACAttributeSubMapperTest {
   void transformsIntrospectionAndLogoutSubjects() {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+        HMACAttributeSubMapper.HMAC_KEY, KEY
     ));
     final UserSessionModel userSession = userSession("personalIdentityNumber", "personnummer-value");
     final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
@@ -190,7 +213,7 @@ class HMACAttributeSubMapperTest {
   void clientCanOverrideDefaultSubjectTypeToPairwise() throws Exception {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key",
+        HMACAttributeSubMapper.HMAC_KEY, KEY,
         HMACAttributeSubMapper.SUBJECT_TYPE, "public"
     ));
     final ClientSessionContext clientSessionContext = clientSessionContext(
@@ -200,7 +223,7 @@ class HMACAttributeSubMapperTest {
         userSession("personalIdentityNumber", "personnummer-value"), clientSessionContext);
 
     final Mac mac = Mac.getInstance("HmacSHA256");
-    mac.init(new SecretKeySpec("test-hmac-key".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    mac.init(new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
     final byte[] sector = "sector.example.org".getBytes(StandardCharsets.UTF_8);
     final byte[] attribute = "personnummer-value".getBytes(StandardCharsets.UTF_8);
     final java.nio.ByteBuffer input = java.nio.ByteBuffer.allocate(Integer.BYTES + sector.length + attribute.length);
@@ -213,7 +236,7 @@ class HMACAttributeSubMapperTest {
   void pairwiseSubjectsGroupClientsBySectorHost() {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key",
+        HMACAttributeSubMapper.HMAC_KEY, KEY,
         HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise"
     ));
     final UserSessionModel userSession = userSession("personalIdentityNumber", "personnummer-value");
@@ -237,10 +260,10 @@ class HMACAttributeSubMapperTest {
   }
 
   @Test
-  void pairwiseModePreservesIncomingTokenWhenSectorCannotBeResolved() {
+  void pairwiseModeFailsWhenSectorCannotBeResolved() {
     final ProtocolMapperModel mapperModel = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key",
+        HMACAttributeSubMapper.HMAC_KEY, KEY,
         HMACAttributeSubMapper.SUBJECT_TYPE, "pairwise"
     ));
     final ClientSessionContext clientSessionContext = clientSessionContext("pairwise", null);
@@ -252,12 +275,9 @@ class HMACAttributeSubMapperTest {
         "https://two.example.org/callback"
     ));
 
-    final IDToken token = new IDToken();
-    token.setSubject("original-subject");
-    assertSame(token, new HMACAttributeSubMapper().transformIDToken(
-        token, mapperModel, null,
+    assertServerError(() -> new HMACAttributeSubMapper().transformIDToken(
+        new IDToken(), mapperModel, null,
         userSession("personalIdentityNumber", "personnummer-value"), clientSessionContext));
-    assertEquals("original-subject", token.getSubject());
   }
 
   @ParameterizedTest
@@ -266,7 +286,7 @@ class HMACAttributeSubMapperTest {
   void usesDefaultsForNullOrBlankOptionalSettings(final String value) throws Exception {
     final ProtocolMapperModel defaults = mapperModel(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+        HMACAttributeSubMapper.HMAC_KEY, KEY
     ));
     final Map<String, String> config = new HashMap<>(defaults.getConfig());
     config.put(HMACAttributeSubMapper.HMAC_ALGORITHM, value);
@@ -285,15 +305,37 @@ class HMACAttributeSubMapperTest {
 
   @ParameterizedTest
   @CsvSource({
-      "attribute.names, ''",
-      "hmac.key, ''",
-      "hmac.algorithm, unsupported",
-      "sub.encoding, unsupported",
-      "subject.type, unsupported"
+      "attribute.names, '', hmacSubMapperMissingAttributes",
+      "hmac.key, '', hmacSubMapperMissingKey",
+      "hmac.key, short-key, hmacSubMapperKeyTooShort",
+      "hmac.algorithm, unsupported, hmacSubMapperUnsupportedAlgorithm",
+      "hmac.algorithm, HmacMD5, hmacSubMapperUnsupportedAlgorithm",
+      "sub.encoding, unsupported, hmacSubMapperUnsupportedEncoding",
+      "subject.type, unsupported, hmacSubMapperUnsupportedSubjectType"
   })
-  void rejectsInvalidMapperSettings(final String setting, final String value) {
-    assertThrows(ProtocolMapperConfigException.class, () -> new HMACAttributeSubMapper().validateConfig(
-        null, null, mock(ClientScopeModel.class), validationModel(setting, value)));
+  void rejectsInvalidMapperSettings(final String setting, final String value, final String messageKey) {
+    final var exception = assertThrows(ProtocolMapperConfigException.class, () ->
+        new HMACAttributeSubMapper().validateConfig(
+            null, null, mock(ClientScopeModel.class), validationModel(setting, value)));
+    assertEquals(messageKey, exception.getMessageKey());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"HmacSHA256, 32", "HmacSHA384, 48", "HmacSHA512, 64"})
+  void enforcesMinimumKeyLengthPerAlgorithm(final String algorithm, final int minimumKeyLength) throws Exception {
+    final Map<String, String> config = new HashMap<>(Map.of(
+        HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
+        HMACAttributeSubMapper.HMAC_ALGORITHM, algorithm
+    ));
+    final HMACAttributeSubMapper mapper = new HMACAttributeSubMapper();
+
+    config.put(HMACAttributeSubMapper.HMAC_KEY, KEY.substring(0, minimumKeyLength - 1));
+    final var exception = assertThrows(ProtocolMapperConfigException.class,
+        () -> mapper.validateConfig(null, null, mock(ClientScopeModel.class), mapperModel(config)));
+    assertEquals("hmacSubMapperKeyTooShort", exception.getMessageKey());
+
+    config.put(HMACAttributeSubMapper.HMAC_KEY, KEY.substring(0, minimumKeyLength));
+    mapper.validateConfig(null, null, mock(ClientScopeModel.class), mapperModel(config));
   }
 
   @Test
@@ -384,10 +426,15 @@ class HMACAttributeSubMapperTest {
     assertEquals(PairwiseSubMapperValidator.PAIRWISE_REDIRECT_URIS_MISMATCH, exception.getMessageKey());
   }
 
+  private static void assertServerError(final Executable executable) {
+    final var exception = assertThrows(ErrorResponseException.class, executable);
+    assertEquals(OAuthErrorException.SERVER_ERROR, exception.getError());
+  }
+
   private static ProtocolMapperModel validationModel(final String setting, final String value) {
     final Map<String, String> config = new HashMap<>(Map.of(
         HMACAttributeSubMapper.ATTRIBUTE_NAMES, "personalIdentityNumber",
-        HMACAttributeSubMapper.HMAC_KEY, "test-hmac-key"
+        HMACAttributeSubMapper.HMAC_KEY, KEY
     ));
     config.put(setting, value);
     return mapperModel(config);

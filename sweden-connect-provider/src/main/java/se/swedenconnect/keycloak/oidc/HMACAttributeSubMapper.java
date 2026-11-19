@@ -19,9 +19,12 @@ package se.swedenconnect.keycloak.oidc;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +37,7 @@ import javax.crypto.spec.SecretKeySpec;
 import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
+import org.keycloak.OAuthErrorException;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
@@ -80,6 +84,12 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA256";
   private static final String DEFAULT_SUB_ENCODING = "Base64";
   private static final String DEFAULT_SUBJECT_TYPE = "public";
+  private static final List<String> SUPPORTED_HMAC_ALGORITHMS = List.of("HmacSHA256", "HmacSHA384", "HmacSHA512");
+  // RFC 2104 discourages keys shorter than the HMAC output length.
+  private static final Map<String, Integer> MINIMUM_KEY_LENGTHS = Map.of(
+      "HmacSHA256", 32,
+      "HmacSHA384", 48,
+      "HmacSHA512", 64);
 
   private final ConcurrentMap<HmacConfiguration, Mac> hmacInstances = new ConcurrentHashMap<>();
 
@@ -89,35 +99,50 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
       final RealmModel realm,
       final ProtocolMapperContainerModel mapperContainer,
       final ProtocolMapperModel mapperModel) throws ProtocolMapperConfigException {
+    // Keycloak resolves messageKey as a message bundle key and formats the result with MessageFormat,
+    // so every exception needs a key and messages must not contain quotes or braces.
     final var config = mapperModel.getConfig();
     if (getAttributeNames(mapperModel).isEmpty()) {
-      throw new ProtocolMapperConfigException("Configure at least one user attribute for HMAC input.");
+      throw new ProtocolMapperConfigException("Configure at least one user attribute for HMAC input.",
+          "hmacSubMapperMissingAttributes");
     }
 
     final String key = config.get(HMAC_KEY);
     if (key == null || key.isEmpty()) {
-      throw new ProtocolMapperConfigException("Configure a non-empty HMAC key.");
+      throw new ProtocolMapperConfigException("Configure a non-empty HMAC key.", "hmacSubMapperMissingKey");
     }
     final String algorithm = Optional.ofNullable(mapperModel.getConfig().get(HMAC_ALGORITHM)).filter(NOT_BLANK).orElse(DEFAULT_HMAC_ALGORITHM);
     try {
       initializeHmac(new HmacConfiguration(algorithm, key));
     }
+    catch (final NoSuchAlgorithmException e) {
+      throw new ProtocolMapperConfigException("HMAC algorithm must be one of " + String.join(", ", SUPPORTED_HMAC_ALGORITHMS)
+          + ".", "hmacSubMapperUnsupportedAlgorithm", e);
+    }
+    catch (final InvalidKeyException e) {
+      throw new ProtocolMapperConfigException("HMAC key must be at least " + MINIMUM_KEY_LENGTHS.get(algorithm)
+          + " bytes for " + algorithm + ".", "hmacSubMapperKeyTooShort", e);
+    }
     catch (final GeneralSecurityException | IllegalArgumentException e) {
-      throw new ProtocolMapperConfigException("Unable to initialize the configured HMAC algorithm and key.", e);
+      throw new ProtocolMapperConfigException("Unable to initialize the configured HMAC algorithm and key.",
+          "hmacSubMapperInvalidHmac", e);
     }
 
     final String encoding = Optional.ofNullable(mapperModel.getConfig().get(SUB_ENCODING)).filter(NOT_BLANK).orElse(DEFAULT_SUB_ENCODING);
     if (!"Base64".equals(encoding) && !"Hex".equals(encoding)) {
-      throw new ProtocolMapperConfigException("Subject encoding must be Base64 or Hex.");
+      throw new ProtocolMapperConfigException("Subject encoding must be Base64 or Hex.",
+          "hmacSubMapperUnsupportedEncoding");
     }
 
     if (!isValidSubjectType(resolveSubjectType(mapperModel, null))) {
-      throw new ProtocolMapperConfigException("Default subject type must be public or pairwise.");
+      throw new ProtocolMapperConfigException("Default subject type must be public or pairwise.",
+          "hmacSubMapperUnsupportedSubjectType");
     }
     if (mapperContainer instanceof ClientModel client) {
       final String subjectType = resolveSubjectType(mapperModel, client);
       if (!isValidSubjectType(subjectType)) {
-        throw new ProtocolMapperConfigException("Client attribute 'oidc.subject.type' must be public or pairwise.");
+        throw new ProtocolMapperConfigException("Client attribute " + CLIENT_SUBJECT_TYPE
+            + " must be public or pairwise.", "hmacSubMapperUnsupportedClientSubjectType");
       }
       if ("pairwise".equals(subjectType)) {
         validateSectorIdentifier(session, client);
@@ -196,11 +221,21 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
   private static <T extends JsonWebToken> T mapSubject(final T token, final String tokenType, final Runnable mapping) {
     try {
       mapping.run();
+      return token;
     }
-    catch (final ErrorResponseException | IllegalArgumentException e) {
-      log.errorf(e, "Unable to map HMAC subject for %s; returning the original token", tokenType);
+    catch (final ErrorResponseException e) {
+      throw e;
     }
-    return token;
+    catch (final RuntimeException e) {
+      // Fail closed: issuing the token with its previous subject could leak a non-pairwise identifier.
+      log.errorf(e, "Unexpected error while mapping HMAC subject for %s", tokenType);
+      throw mappingError("Unable to map subject");
+    }
+  }
+
+  private static ErrorResponseException mappingError(final String description) {
+    return new ErrorResponseException(
+        OAuthErrorException.SERVER_ERROR, description, Response.Status.INTERNAL_SERVER_ERROR);
   }
 
   protected void setSub(
@@ -222,24 +257,18 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     final List<String> attributeNames = getAttributeNames(mappingModel);
     if (attributeNames.isEmpty()) {
       log.error("Unable to set subject: no user attributes are configured for HMAC input");
-      throw new ErrorResponseException("server_error",
-          "No user attributes are configured for HMAC input", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("No user attributes are configured for HMAC input");
     }
-    String attributeValue = null;
-    String matchedAttribute = null;
-    for (final String attributeName : attributeNames) {
-      attributeValue = userSession.getUser().getFirstAttribute(attributeName);
-      if (attributeValue != null) {
-        matchedAttribute = attributeName;
-        break;
-      }
-    }
-    if (matchedAttribute == null) {
-      log.errorf("Unable to set subject: none of the configured user attributes %s has a value",
-          attributeNames);
-      throw new ErrorResponseException("invalid_grant",
-          "none of the configured subject attributes has a value", Response.Status.BAD_REQUEST);
-    }
+    // Blank values are skipped, since all users with a blank value would otherwise share one subject.
+    final String attributeValue = attributeNames.stream()
+        .map(userSession.getUser()::getFirstAttribute)
+        .filter(value -> value != null && !value.isBlank())
+        .findFirst()
+        .orElseThrow(() -> {
+          log.errorf("Unable to set subject: none of the configured user attributes %s has a non-blank value",
+              attributeNames);
+          return mappingError("None of the configured subject attributes has a value");
+        });
 
     final ClientModel client = clientSessionCtx == null || clientSessionCtx.getClientSession() == null
         ? null
@@ -247,8 +276,7 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     final String subjectType = resolveSubjectType(mappingModel, client);
     if (!isValidSubjectType(subjectType)) {
       log.errorf("Unsupported subject type '%s'", subjectType);
-      throw new ErrorResponseException(
-          "server_error", "Unsupported subject type", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("Unsupported subject type");
     }
     final byte[] input = "pairwise".equals(subjectType)
         ? this.pairwiseInput(attributeValue, getSectorIdentifier(client))
@@ -292,8 +320,7 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
   private static String getSectorIdentifier(final ClientModel client) {
     if (client == null) {
       log.error("Unable to create pairwise subject: OIDC client is unavailable");
-      throw new ErrorResponseException(
-          "server_error", "OIDC client is unavailable", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("OIDC client is unavailable");
     }
 
     final String sectorUri = getSectorIdentifierUri(client);
@@ -302,8 +329,7 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
         : PairwiseSubMapperUtils.resolveValidSectorIdentifier(client.getRootUrl(), client.getRedirectUris());
     if (sector == null || sector.isBlank()) {
       log.errorf("Unable to resolve pairwise sector identifier for client '%s'", client.getClientId());
-      throw new ErrorResponseException("server_error",
-          "Unable to resolve pairwise sector identifier", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("Unable to resolve pairwise sector identifier");
     }
     return sector;
   }
@@ -337,8 +363,7 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     case "Hex" -> HexFormat.of().formatHex(hash);
     default -> {
       log.errorf("Unsupported HMAC subject encoding '%s'", encoding);
-      throw new ErrorResponseException("server_error",
-          "Unsupported HMAC subject encoding", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("Unsupported HMAC subject encoding");
     }
     };
   }
@@ -347,9 +372,8 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     final String key = mappingModel.getConfig().get(HMAC_KEY);
     final String algorithm = Optional.ofNullable(mappingModel.getConfig().get(HMAC_ALGORITHM)).filter(NOT_BLANK).orElse(DEFAULT_HMAC_ALGORITHM);
     if (key == null || key.isEmpty()) {
-      final IllegalArgumentException exception = new IllegalArgumentException("HMAC key is missing");
       log.error("Unable to initialize HMAC for protocol mapper: HMAC key is missing");
-      throw exception;
+      throw mappingError("Unable to initialize configured HMAC");
     }
 
     final HmacConfiguration configuration = new HmacConfiguration(algorithm, key);
@@ -364,14 +388,22 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     }
     catch (final GeneralSecurityException | IllegalArgumentException e) {
       log.errorf(e, "Unable to initialize HMAC mapper using algorithm '%s'", configuration.algorithm());
-      throw new ErrorResponseException(
-          "server_error", "Unable to initialize configured HMAC", Response.Status.INTERNAL_SERVER_ERROR);
+      throw mappingError("Unable to initialize configured HMAC");
     }
   }
 
+  // Also enforced at token time, since realm imports do not run validateConfig.
   private static Mac initializeHmac(final HmacConfiguration configuration) throws GeneralSecurityException {
+    final Integer minimumKeyLength = MINIMUM_KEY_LENGTHS.get(configuration.algorithm());
+    if (minimumKeyLength == null) {
+      throw new NoSuchAlgorithmException("Unsupported HMAC algorithm");
+    }
+    final byte[] key = configuration.key().getBytes(StandardCharsets.UTF_8);
+    if (key.length < minimumKeyLength) {
+      throw new InvalidKeyException("HMAC key must be at least " + minimumKeyLength + " bytes");
+    }
     final Mac mac = Mac.getInstance(configuration.algorithm());
-    mac.init(new SecretKeySpec(configuration.key().getBytes(StandardCharsets.UTF_8), configuration.algorithm()));
+    mac.init(new SecretKeySpec(key, configuration.algorithm()));
     return mac;
   }
 
@@ -402,14 +434,15 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     attributeNames.setLabel("User Attributes");
     attributeNames.setHelpText(
         "User attribute names to try in order for the HMAC input, one name per line. "
-            + "The first attribute with a non-null value is used.");
+            + "The first attribute with a non-blank value is used.");
     attributeNames.setType(ProviderConfigProperty.TEXT_TYPE);
     attributeNames.setRequired(true);
 
     final ProviderConfigProperty hmacKey = new ProviderConfigProperty();
     hmacKey.setName(HMAC_KEY);
     hmacKey.setLabel("HMAC Key");
-    hmacKey.setHelpText("Symmetric key used to compute the subject HMAC.");
+    hmacKey.setHelpText("Symmetric key used to compute the subject HMAC. Must be at least 32 bytes for HmacSHA256, "
+        + "48 bytes for HmacSHA384 and 64 bytes for HmacSHA512. Use a randomly generated key.");
     hmacKey.setType(ProviderConfigProperty.STRING_TYPE);
     hmacKey.setSecret(true);
     hmacKey.setRequired(true);
@@ -419,7 +452,7 @@ public class HMACAttributeSubMapper extends AbstractOIDCProtocolMapper
     hmacAlgorithm.setLabel("HMAC Algorithm");
     hmacAlgorithm.setHelpText("HMAC algorithm used to compute the subject.");
     hmacAlgorithm.setType(ProviderConfigProperty.LIST_TYPE);
-    hmacAlgorithm.setOptions(List.of("HmacSHA256", "HmacSHA384", "HmacSHA512"));
+    hmacAlgorithm.setOptions(SUPPORTED_HMAC_ALGORITHMS);
     hmacAlgorithm.setDefaultValue(DEFAULT_HMAC_ALGORITHM);
 
     final ProviderConfigProperty subPrefix = new ProviderConfigProperty();
