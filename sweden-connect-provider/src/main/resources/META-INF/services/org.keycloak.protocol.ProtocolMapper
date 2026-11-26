@@ -1,3 +1,4 @@
 se.swedenconnect.keycloak.oidc.OIDCMapper
 se.swedenconnect.keycloak.oidc.ResourceMapper
 se.swedenconnect.keycloak.oidc.HMACAttributeSubMapper
+se.swedenconnect.keycloak.oidc.TokenExchangeTargetMapper

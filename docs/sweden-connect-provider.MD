@@ -33,6 +33,9 @@ Support for RFC 8707 resource indicators is implemented across three components:
 `resource-authenticator` (auth flow), `resource-mapper` (protocol mapper), and
 `rfc8707-resource-indicator` (client policy executor). All three must be configured together.
 
+For token exchange, `oidc-token-exchange-target-mapper` handles `resource` and `audience`: see
+[token-exchange-target-mapper.md](token-exchange-target-mapper.md).
+
 
 ### Key Providers
 
